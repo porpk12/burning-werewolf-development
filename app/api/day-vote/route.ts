@@ -15,7 +15,7 @@ function cookieToken(request: Request, gameId: string) {
 async function context(request: Request, code: string) {
   if (!/^[A-Z0-9]{6}$/.test(code)) return { error: 'รหัสห้องไม่ถูกต้อง', status: 400 } as const
   const db = adminClient()
-  const { data: game, error } = await db.from('games').select('id, phase, round_number, moderator_id').eq('room_code', code).maybeSingle()
+  const { data: game, error } = await db.from('games').select('id, phase, round_number, moderator_id, voting_closed').eq('room_code', code).maybeSingle()
   if (error || !game) return { error: 'ไม่พบห้อง', status: 404 } as const
   const mod = await getModerator()
   const isModerator = mod?.id === game.moderator_id
@@ -46,7 +46,9 @@ export async function GET(request: Request) {
   const blockedTrustIds = ownRole === 'werewolf' ? roles?.filter(r => r.role === 'werewolf').map(r => r.player_id) ?? [] : []
   const own = rows?.find(x => x.voter_player_id === playerId)
   const totals = isModerator ? (players ?? []).map(p => ({ id: p.id, name: p.display_name, trust: rows?.filter(v => v.trust_target_player_id === p.id).length ?? 0, distrust: rows?.filter(v => v.distrust_target_player_id === p.id).length ?? 0 })) : undefined
-  return NextResponse.json({ isModerator, round: game.round_number, selfId: playerId, players: players ?? [], blockedTrustIds: isModerator ? [] : blockedTrustIds, ownVote: own ? { trust: own.trust_target_player_id, distrust: own.distrust_target_player_id } : null, submittedCount: rows?.length ?? 0, totals }, { headers: { 'Cache-Control': 'no-store' } })
+  const details = isModerator ? (rows ?? []).map(v => ({ voterId: v.voter_player_id, voterName: players?.find(p => p.id === v.voter_player_id)?.display_name ?? 'ไม่ทราบชื่อ', trust: v.trust_target_player_id, distrust: v.distrust_target_player_id })) : undefined
+  const noTotals = isModerator ? { trust: rows?.filter(v => v.trust_target_player_id === null).length ?? 0, distrust: rows?.filter(v => v.distrust_target_player_id === null).length ?? 0 } : undefined
+  return NextResponse.json({ votingClosed: game.voting_closed, details, noTotals, isModerator, round: game.round_number, selfId: playerId, players: players ?? [], blockedTrustIds: isModerator ? [] : blockedTrustIds, ownVote: own ? { trust: own.trust_target_player_id, distrust: own.distrust_target_player_id } : null, submittedCount: rows?.length ?? 0, totals }, { headers: { 'Cache-Control': 'no-store' } })
 }
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -55,6 +57,7 @@ export async function POST(request: Request) {
   if ('error' in ctx) return NextResponse.json({ error: ctx.error }, { status: ctx.status })
   const { db, game, isModerator, playerId } = ctx
   if (game.phase !== 'day') return NextResponse.json({ error: 'ไม่อยู่ในช่วงลงคะแนน' }, { status: 409 })
+  if (game.voting_closed) return NextResponse.json({ error: 'ปิดโหวตแล้ว ไม่สามารถแก้ไขคะแนนได้' }, { status: 409 })
   if (isModerator || !playerId) return NextResponse.json({ error: 'เฉพาะผู้เล่นเท่านั้นที่ลงคะแนนได้' }, { status: 403 })
   // null represents an explicit No vote; missing fields are invalid.
   const trust = body?.trust
@@ -79,7 +82,22 @@ export async function POST(request: Request) {
       if (targetRole.role === 'werewolf') return NextResponse.json({ error: 'หมาป่าไม่สามารถโหวตเชื่อใจหมาป่าด้วยกันได้' }, { status: 400 })
     }
   }
-  const { error: saveError } = await db.from('votes').upsert({ game_id: game.id, round_number: game.round_number, voter_player_id: playerId, trust_target_player_id: trust, distrust_target_player_id: distrust, submitted_at: new Date().toISOString() }, { onConflict: 'game_id,round_number,voter_player_id' })
+  const { error: saveError } = await db.rpc('submit_day_vote', { p_game_id: game.id, p_round_number: game.round_number, p_voter_player_id: playerId, p_trust_target_player_id: trust, p_distrust_target_player_id: distrust })
   if (saveError) return NextResponse.json({ error: 'บันทึกคะแนนไม่สำเร็จ' }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+export async function PATCH(request: Request) {
+  const body = await request.json().catch(() => null)
+  const code = typeof body?.code === 'string' ? body.code.trim().toUpperCase() : ''
+  const ctx = await context(request, code)
+  if ('error' in ctx) return NextResponse.json({ error: ctx.error }, { status: ctx.status })
+  const { db, game, isModerator } = ctx
+  if (!isModerator) return NextResponse.json({ error: 'เฉพาะ Moderator เท่านั้น' }, { status: 403 })
+  if (game.phase !== 'day') return NextResponse.json({ error: 'ยังไม่ใช่ช่วงกลางวัน' }, { status: 409 })
+  if (game.voting_closed) return NextResponse.json({ error: 'ปิดโหวตไปแล้ว' }, { status: 409 })
+  const { data, error } = await db.from('games').update({ voting_closed: true }).eq('id', game.id).eq('phase', 'day').eq('voting_closed', false).select('id').maybeSingle()
+  if (error) return NextResponse.json({ error: 'ปิดโหวตไม่สำเร็จ' }, { status: 500 })
+  if (!data) return NextResponse.json({ error: 'ปิดโหวตไปแล้ว หรือสถานะเกมเปลี่ยน' }, { status: 409 })
   return NextResponse.json({ ok: true })
 }
