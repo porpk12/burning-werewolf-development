@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const code = new URL(request.url).searchParams.get('code')?.trim().toUpperCase() ?? ''
   if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
-  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, phase, player_limit, werewolf_count, lobby_open, moderator_id').eq('room_code', code).maybeSingle()
+  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id').eq('room_code', code).maybeSingle()
   if (gameError || !game) return NextResponse.json({ error: 'ไม่พบห้อง' }, { status: 404 })
   const moderator = await getModerator()
   const isOwner = moderator?.id === game.moderator_id
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   }
   const { data: players, error } = await admin.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (error) return NextResponse.json({ error: 'โหลดรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, player_limit: game.player_limit, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -37,10 +37,20 @@ export async function POST(request: Request) {
   if (!moderator) return NextResponse.json({ error: 'ต้องเข้าสู่ระบบ Moderator' }, { status: 403 })
   const body = await request.json().catch(() => null)
   const code = typeof body?.code === 'string' ? body.code.trim().toUpperCase() : ''
-  if (body?.action !== 'start' || !/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'คำสั่งไม่ถูกต้อง' }, { status: 400 })
+  if (!['start', 'restart'].includes(body?.action) || !/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'คำสั่งไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
   const { data: game } = await admin.from('games').select('id, phase, player_limit, werewolf_count, moderator_id').eq('room_code', code).eq('moderator_id', moderator.id).maybeSingle()
   if (!game) return NextResponse.json({ error: 'ไม่พบห้องของผู้ดูแล' }, { status: 404 })
+  if (body.action === 'restart') {
+    if (game.phase === 'lobby') return NextResponse.json({ error: 'ห้องอยู่ใน Lobby อยู่แล้ว' }, { status: 409 })
+    // Atomic reset in PostgreSQL. Only the authenticated room moderator can reach this branch.
+    const { error: resetError } = await admin.rpc('restart_game_in_same_room', { p_game_id: game.id })
+    if (resetError) {
+      console.error('Restart game failed:', resetError)
+      return NextResponse.json({ error: 'รีเซ็ตเกมไม่สำเร็จ กรุณาตรวจสอบว่าได้รัน SQL migration แล้ว' }, { status: 500 })
+    }
+    return NextResponse.json({ ok: true, phase: 'lobby' })
+  }
   if (game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้เริ่มเกมแล้ว' }, { status: 409 })
   const { data: players, error: playerError } = await admin.from('game_players').select('id').eq('game_id', game.id).neq('status', 'removed')
   if (playerError || !players) return NextResponse.json({ error: 'อ่านรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
