@@ -67,7 +67,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'กรุณาเลือกผู้เล่นหรือ No ทั้งสองช่อง' }, { status: 400 })
   }
   if (trust === playerId) return NextResponse.json({ error: 'ไม่สามารถเชื่อใจตัวเองได้' }, { status: 400 })
-  if (trust !== null && trust === distrust) return NextResponse.json({ error: 'ไม่สามารถเชื่อใจและไม่เชื่อใจคนเดียวกันได้' }, { status: 400 })
   const ids = [...new Set([trust, distrust].filter((id): id is string => id !== null))]
   if (ids.length) {
     const { data: targets, error } = await db.from('game_players').select('id').eq('game_id', game.id).neq('status', 'removed').in('id', ids)
