@@ -19,7 +19,7 @@ export function RoomControls() {
     setBusy(true)
     setMessage('')
     const action = mode === 'create' ? 'create' : 'join'
-    const response = await fetch('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(action === 'create' ? {} : { action, roomCode, displayName }) })
+    const response = await fetch('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(action === 'create' ? { action } : { action, roomCode, displayName }) })
     const result = await response.json().catch(() => null)
     if (!response.ok) setMessage(result?.error ?? 'ดำเนินการไม่สำเร็จ')
     else if (action === 'create') setRoom(result.game)
