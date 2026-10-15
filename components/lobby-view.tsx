@@ -112,12 +112,15 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
           </div>
         </div>}
     </div>}
-    {moderator && data?.isModerator && data.game.phase !== 'lobby' && <div className="mt-4 flex flex-wrap gap-3">
+    {moderator && data?.isModerator && data.game.phase !== 'lobby' && data.game.phase !== 'day' && <div className="mt-4 flex flex-wrap gap-3">
       <button disabled={busy || (data.game.phase === 'night_zero' && data.game.round_number === 0)} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">← ย้อนกลับ Phase</button>
       <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
     </div>}
     {data?.game.phase === 'night_zero' && <NightZeroPanel code={code} moderator={moderator} phase={data.game.phase} />}
-    {data?.game.phase === 'day' && <DayVotePanel code={code} />}
+    {data?.game.phase === 'day' && <DayVotePanel code={code} navigation={moderator && data?.isModerator ? (<div className="mt-4 flex flex-wrap gap-3">
+      <button disabled={busy || (data.game.phase === 'night_zero' && data.game.round_number === 0)} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">← ย้อนกลับ Phase</button>
+      <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
+    </div>) : null} />}
     {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
     <div className="mt-6 flex gap-4"><button className="text-sm underline" onClick={() => void refresh()}>รีเฟรชรายชื่อ</button><button className="text-sm underline" onClick={() => router.push(moderator ? '/mod' : '/')}>กลับหน้าหลัก</button></div>
   </div></main>
