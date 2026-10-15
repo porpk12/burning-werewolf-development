@@ -29,14 +29,21 @@ export async function GET(request: Request) {
   }
   const { data: players, error } = await admin.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (error) return NextResponse.json({ error: 'โหลดรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
-  // Role data must never be included in responses for regular players.
-  let moderatorRoles: Record<string, string> | undefined
-  if (isOwner && game.phase !== 'lobby') {
-    const { data: roles, error: rolesError } = await admin.from('game_roles').select('player_id, role').eq('game_id', game.id)
-    if (rolesError) return NextResponse.json({ error: 'โหลดบทบาทผู้เล่นไม่สำเร็จ' }, { status: 500 })
-    moderatorRoles = Object.fromEntries((roles ?? []).map(r => [r.player_id, r.role]))
+  // Only the authenticated player may receive their own secret role.
+  let ownRole: 'werewolf' | 'villager' | null = null
+  let teammates: string[] = []
+  if (!isOwner && selfId && game.phase !== 'lobby') {
+    const { data: roleRow, error: roleError } = await admin.from('game_roles').select('role').eq('game_id', game.id).eq('player_id', selfId).maybeSingle()
+    if (roleError) return NextResponse.json({ error: 'อ่านบทบาทของคุณไม่สำเร็จ' }, { status: 500 })
+    if (roleRow?.role === 'werewolf' || roleRow?.role === 'villager') ownRole = roleRow.role
+    if (ownRole === 'werewolf') {
+      const { data: wolves, error: wolvesError } = await admin.from('game_roles').select('player_id').eq('game_id', game.id).eq('role', 'werewolf')
+      if (wolvesError) return NextResponse.json({ error: 'อ่านข้อมูลทีมไม่สำเร็จ' }, { status: 500 })
+      const wolfIds = (wolves ?? []).map(wolf => wolf.player_id).filter(id => id !== selfId)
+      teammates = (players ?? []).filter(player => wolfIds.includes(player.id)).map(player => player.display_name)
+    }
   }
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : {}) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId, ownRole, teammates }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
