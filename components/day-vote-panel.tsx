@@ -60,9 +60,9 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
   const playerOrder = new Map((data?.players ?? []).map((p, i) => [p.id, p.seat_number ?? i]))
   const orderedDetails = [...(data?.details ?? [])].sort((a, b) => (playerOrder.get(a.voterId) ?? Infinity) - (playerOrder.get(b.voterId) ?? Infinity))
   const orderedTotals = [...voteTotals].sort((a, b) => (playerOrder.get(a.id) ?? Infinity) - (playerOrder.get(b.id) ?? Infinity))
-  // Day 1 is always safe. From Day 2 onward a unique top distrust with zero trust is exiled.
-  const exiledName = data?.round === 1 || maxDistrust === 0 || topDistrusted.length !== 1 || topDistrusted[0].trust !== 0
-    ? null : topDistrusted[0].name
+  // Day 1 is safe; on later days all tied top-distrust players with zero trust are exiled.
+  const exiledNames = data?.round === 1 || maxDistrust === 0
+    ? [] : topDistrusted.filter(p => p.trust === 0).map(p => p.name)
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Day {data?.round ?? 1} — ลงคะแนนลับ</h2>
     {data?.isModerator ? <>
@@ -74,7 +74,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
         <h3 className="font-semibold text-[#d4a65a]">สรุปผลการลงคะแนน — Day {data.round}</h3>
         <p className="mt-3">ไม่เชื่อใจมากที่สุด: <strong>{mostDistrusted || 'ไม่มีข้อมูล'} ({maxDistrust} คะแนน)</strong></p>
         <p className="mt-2">เชื่อใจมากที่สุด: <strong>{mostTrusted || 'ไม่มีข้อมูล'} ({maxTrust} คะแนน)</strong></p>
-        <p className="mt-3 font-semibold">{exiledName ? `☠ ถูกเนรเทศ: ${exiledName}` : 'ไม่มีใครถูกเนรเทศ'}</p>
+        <p className="mt-3 font-semibold">{exiledNames.length ? `☠ ถูกเนรเทศ: ${exiledNames.join(', ')}` : 'ไม่มีใครถูกเนรเทศ'}</p>
         {data.round === 1 && <p className="mt-1 text-sm text-[#b7aaa0]">Day 1 ไม่มีการเนรเทศ ไม่ว่าผลคะแนนจะเป็นอย่างไร</p>}
         <button type="button" aria-expanded={showDetails} onClick={() => setShowDetails(value => !value)} className="mt-4 flex w-full items-center justify-between rounded border border-[#6e4e2f] px-3 py-3 text-left font-semibold">
           <span>รายละเอียดการลงคะแนน (เฉพาะ Moderator)</span><span aria-hidden="true">{showDetails ? '▲' : '▼'}</span>
