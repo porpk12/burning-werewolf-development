@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-type Player = { id: string; display_name: string; seat_number: number }
+type Player = { id: string; display_name: string; seat_number: number; status: string }
 type VoteData = { votingClosed: boolean; noTotals?: { trust: number; distrust: number }; details?: { voterId: string; voterName: string; trust: string | null; distrust: string | null }[]; isModerator: boolean; round: number; selfId: string | null; players: Player[]; blockedTrustIds: string[]; ownVote: { trust: string | null; distrust: string | null } | null; submittedCount: number; exileResult?: { playerId: string | null; playerName: string | null; reason: string }; totals?: { id: string; name: string; trust: number; distrust: number }[] }
 export function DayVotePanel({ code }: { code: string }) {
   const [data, setData] = useState<VoteData | null>(null)
@@ -19,6 +19,7 @@ export function DayVotePanel({ code }: { code: string }) {
   useEffect(() => { void refresh(); const id = setInterval(() => void refresh(), 4000); return () => clearInterval(id) }, [refresh])
   useEffect(() => { if (data?.ownVote && !busy) { setTrust(data.ownVote.trust ?? 'NO'); setDistrust(data.ownVote.distrust ?? 'NO') } }, [data?.ownVote?.trust, data?.ownVote?.distrust, busy])
   async function submit() {
+    if ((trust !== 'NO' && !trustChoices.some(p => p.id === trust)) || (distrust !== 'NO' && !distrustChoices.some(p => p.id === distrust))) { setError('ตัวเลือกไม่ถูกต้อง กรุณาเลือกใหม่'); return }
     setBusy(true)
     try {
       const r = await fetch('/api/day-vote', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, trust: trust === 'NO' ? null : trust, distrust: distrust === 'NO' ? null : distrust }) })
@@ -40,8 +41,13 @@ export function DayVotePanel({ code }: { code: string }) {
     finally { setBusy(false) }
   }
   const displayName = (id: string | null) => id === null ? 'ไม่มี' : data?.players.find(p => p.id === id)?.display_name ?? 'ไม่ทราบชื่อ'
-  const trustChoices = data?.players.filter(p => p.id !== data.selfId && !data.blockedTrustIds?.includes(p.id)) ?? []
-  const distrustChoices = data?.players ?? []
+  const trustChoices = data?.players.filter(p => p.status === 'connected' && p.id !== data.selfId && !data.blockedTrustIds?.includes(p.id)) ?? []
+  const distrustChoices = data?.players.filter(p => p.status === 'connected') ?? []
+  useEffect(() => {
+    if (!data || data.isModerator) return
+    if (trust && trust !== 'NO' && !data.players.some(p => p.id === trust && p.status === 'connected' && p.id !== data.selfId && !data.blockedTrustIds.includes(p.id))) setTrust('')
+    if (distrust && distrust !== 'NO' && !data.players.some(p => p.id === distrust && p.status === 'connected')) setDistrust('')
+  }, [data, trust, distrust])
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Day {data?.round ?? 1} — ลงคะแนนลับ</h2>
     {data?.isModerator ? <>
