@@ -27,6 +27,7 @@ export function ModCreateRoom() {
       }
       setGame(result.game)
       router.refresh()
+      router.push(`/mod/room/${result.game.room_code}`)
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่')
     } finally {
