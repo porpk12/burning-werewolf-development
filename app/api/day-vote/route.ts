@@ -36,7 +36,7 @@ export async function GET(request: Request) {
   if ('error' in ctx) return NextResponse.json({ error: ctx.error }, { status: ctx.status })
   const { db, game, isModerator, playerId } = ctx
   if (game.phase !== 'day') return NextResponse.json({ error: 'ยังไม่ใช่ช่วงกลางวัน' }, { status: 409 })
-  const { data: players, error: playerError } = await db.from('game_players').select('id, display_name, seat_number').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
+  const { data: players, error: playerError } = await db.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (playerError) return NextResponse.json({ error: 'โหลดรายชื่อไม่สำเร็จ' }, { status: 500 })
   const { data: rows, error: voteError } = await db.from('votes').select('voter_player_id, trust_target_player_id, distrust_target_player_id').eq('game_id', game.id).eq('round_number', game.round_number)
   if (voteError) return NextResponse.json({ error: 'โหลดคะแนนไม่สำเร็จ' }, { status: 500 })
@@ -66,11 +66,14 @@ export async function POST(request: Request) {
       !(distrust === null || typeof distrust === 'string' && distrust.length > 0)) {
     return NextResponse.json({ error: 'กรุณาเลือกผู้เล่นหรือ No ทั้งสองช่อง' }, { status: 400 })
   }
+  const { data: voter, error: voterError } = await db.from('game_players').select('status').eq('game_id', game.id).eq('id', playerId).maybeSingle()
+  if (voterError || !voter) return NextResponse.json({ error: 'ตรวจสอบสถานะผู้เล่นไม่สำเร็จ' }, { status: 500 })
+  if (voter.status !== 'connected') return NextResponse.json({ error: 'ผู้ถูกเนรเทศไม่สามารถลงคะแนนได้' }, { status: 403 })
   if (trust === playerId) return NextResponse.json({ error: 'ไม่สามารถเชื่อใจตัวเองได้' }, { status: 400 })
   const ids = [...new Set([trust, distrust].filter((id): id is string => id !== null))]
   if (ids.length) {
-    const { data: targets, error } = await db.from('game_players').select('id').eq('game_id', game.id).neq('status', 'removed').in('id', ids)
-    if (error || targets?.length !== ids.length) return NextResponse.json({ error: 'ผู้ถูกโหวตไม่อยู่ในห้อง' }, { status: 400 })
+    const { data: targets, error } = await db.from('game_players').select('id').eq('game_id', game.id).eq('status', 'connected').in('id', ids)
+    if (error || targets?.length !== ids.length) return NextResponse.json({ error: 'ไม่สามารถโหวตผู้ที่ถูกเนรเทศหรือไม่ได้อยู่ในเกม' }, { status: 400 })
   }
   if (trust !== null) {
     const { data: ownRole, error: ownRoleError } = await db.from('game_roles').select('role').eq('game_id', game.id).eq('player_id', playerId).maybeSingle()
