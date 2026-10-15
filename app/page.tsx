@@ -27,6 +27,7 @@ import {
 import { Anuphan } from 'next/font/google'
 import { Button } from '@/components/ui/button'
 import { GameSimulation } from '@/components/game-simulation'
+import { RoomControls } from '@/components/room-controls'
 
 const anuphan = Anuphan({ subsets: ['thai', 'latin'], variable: '--font-anuphan' })
 
@@ -115,7 +116,7 @@ export default function Page() {
         </aside>
 
         <section className="content-area" id="dashboard">
-          <div className="section-heading"><div><p className="eyebrow">คืนที่ 03 · รอบการเล่นปัจจุบัน</p><h1>หมู่บ้านกำลังลุกไหม้</h1><p className="lede">จัดการเกมและติดตามชะตากรรมของผู้เล่นจากศูนย์บัญชาการ</p></div><Button className="primary-button"><Plus data-icon="inline-start" /> สร้างเกมใหม่</Button></div>
+          <div className="section-heading"><div><p className="eyebrow">คืนที่ 03 · รอบการเล่นปัจจุบัน</p><h1>หมู่บ้านกำลังลุกไหม้</h1><p className="lede">จัดการเกมและติดตามชะตากรรมของผู้เล่นจากศูนย์บัญชาการ</p></div><RoomControls /></div>
 
           <div className="stat-grid">
             <div className="stat-card"><div className="stat-icon ember-icon"><Flame /></div><div><p className="stat-label">เกมที่กำลังดำเนินอยู่</p><p className="stat-value">01</p><p className="stat-note text-ember">กำลังเล่นอยู่</p></div></div>
@@ -135,7 +136,7 @@ export default function Page() {
           <GameSimulation />
         </section>
       </div>
-      <footer className="app-footer"><BrandMark /><span>© 2024 Burning Werewolf · คืนนี้… ใครจะรอด?</span></footer>
+      <footer className="app-footer"><BrandMark /><span>© 2024 Burning Werewolf · คืนนี���… ใครจะรอด?</span></footer>
     </main>
   )
 }
