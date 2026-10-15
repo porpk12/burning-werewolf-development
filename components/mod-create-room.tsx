@@ -8,6 +8,7 @@ type CreatedGame = { id: string; room_code: string }
 export function ModCreateRoom() {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
+  const [werewolfCount, setWerewolfCount] = useState(1)
   const [error, setError] = useState('')
   const [game, setGame] = useState<CreatedGame | null>(null)
 
@@ -18,7 +19,7 @@ export function ModCreateRoom() {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'create' }),
+        body: JSON.stringify({ action: 'create', werewolfCount }),
       })
       const result = await response.json().catch(() => null)
       if (!response.ok || !result?.game?.room_code) {
@@ -47,7 +48,12 @@ export function ModCreateRoom() {
   return (
     <section className="mt-8 rounded-xl border border-[#4b3226] bg-[#211614] p-6">
       <h2 className="font-display text-xl">สร้างห้องเกม</h2>
-      <p className="mt-2 text-sm text-[#b7aaa0]">สร้างห้องสำหรับผู้เล่น 12 คน · หมาป่า 2 ตัว (ค่าเริ่มต้น)</p>
+      <p className="mt-2 text-sm text-[#b7aaa0]">ห้องรองรับผู้เล่นสูงสุด 12 คน และเริ่มได้โดยไม่ต้องรอให้ครบ</p>
+      <label htmlFor="werewolf-count" className="mt-4 block text-sm text-[#f2e4c9]">จำนวนหมาป่า</label>
+      <select id="werewolf-count" value={werewolfCount} onChange={(event) => setWerewolfCount(Number(event.target.value))} disabled={busy} className="mt-2 block w-full max-w-xs rounded-md border border-[#6e4e2f] bg-[#170f0d] px-3 py-2 text-[#f2e4c9]">
+        {[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count} คน</option>)}
+      </select>
+      <p className="mt-2 text-xs text-[#b7aaa0]">เมื่อเริ่มเกม จำนวนผู้เล่นจริงต้องมากกว่าจำนวนหมาป่า</p>
       <button type="button" onClick={createRoom} disabled={busy} className="mt-4 rounded-md bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">
         {busy ? 'กำลังสร้างห้อง…' : 'สร้างห้องเกมใหม่'}
       </button>
