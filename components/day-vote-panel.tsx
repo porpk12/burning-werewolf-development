@@ -9,6 +9,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [detailTab, setDetailTab] = useState<'individual' | 'totals'>('individual')
   const refresh = useCallback(async () => {
     try {
       const r = await fetch(`/api/day-vote?code=${encodeURIComponent(code)}`, { cache: 'no-store' })
@@ -76,10 +77,24 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
         <button type="button" aria-expanded={showDetails} onClick={() => setShowDetails(value => !value)} className="mt-4 flex w-full items-center justify-between rounded border border-[#6e4e2f] px-3 py-3 text-left font-semibold">
           <span>รายละเอียดการลงคะแนน (เฉพาะ Moderator)</span><span aria-hidden="true">{showDetails ? '▲' : '▼'}</span>
         </button>
-        {showDetails && <div className="mt-3 space-y-2">
-          {data.totals?.map(t => <div key={t.id} className="rounded border border-[#4b3226] p-2 text-sm">{t.name} — ไม่เชื่อใจ {t.distrust} · เชื่อใจ {t.trust}</div>)}
-          <div className="rounded border border-[#4b3226] p-2 text-sm">ไม่มี — ไม่เชื่อใจ {data.noTotals?.distrust ?? 0} · เชื่อใจ {data.noTotals?.trust ?? 0}</div>
-          {data.details?.map(d => <div key={d.voterId} className="rounded border border-[#4b3226] p-2 text-sm">{d.voterName} → ไม่เชื่อใจ: {displayName(d.distrust)} · เชื่อใจ: {displayName(d.trust)}</div>)}
+        {showDetails && <div className="mt-3">
+          <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="ประเภทรายละเอียดการลงคะแนน">
+            <button type="button" role="tab" aria-selected={detailTab === 'individual'} onClick={() => setDetailTab('individual')} className={`rounded border px-2 py-3 text-sm ${detailTab === 'individual' ? 'border-[#d4a65a] bg-[#392719] text-[#f0c477]' : 'border-[#6e4e2f] text-[#b7aaa0]'}`}>รายละเอียดรายบุคคล</button>
+            <button type="button" role="tab" aria-selected={detailTab === 'totals'} onClick={() => setDetailTab('totals')} className={`rounded border px-2 py-3 text-sm ${detailTab === 'totals' ? 'border-[#d4a65a] bg-[#392719] text-[#f0c477]' : 'border-[#6e4e2f] text-[#b7aaa0]'}`}>ผลรวมรายบุคคล</button>
+          </div>
+          {detailTab === 'individual' ? <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead><tr className="border-b border-[#6e4e2f] text-[#d4a65a]"><th className="p-2">ผู้โหวต</th><th className="p-2">ไม่เชื่อใจ</th><th className="p-2">เชื่อใจ</th></tr></thead>
+              <tbody>{data.details?.map(d => <tr key={d.voterId} className="border-b border-[#4b3226]"><td className="p-2">{d.voterName}</td><td className="p-2">{displayName(d.distrust)}</td><td className="p-2">{displayName(d.trust)}</td></tr>)}</tbody>
+            </table>
+            {!data.details?.length && <p className="mt-2 text-sm text-[#b7aaa0]">ไม่มีข้อมูลการลงคะแนน</p>}
+          </div> : <div className="mt-3 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead><tr className="border-b border-[#6e4e2f] text-[#d4a65a]"><th className="p-2">ผู้เล่น</th><th className="p-2">ไม่เชื่อใจ</th><th className="p-2">เชื่อใจ</th></tr></thead>
+              <tbody>{data.totals?.map(t => <tr key={t.id} className="border-b border-[#4b3226]"><td className="p-2">{t.name}</td><td className="p-2">{t.distrust}</td><td className="p-2">{t.trust}</td></tr>)}</tbody>
+            </table>
+            {!data.totals?.length && <p className="mt-2 text-sm text-[#b7aaa0]">ไม่มีข้อมูลคะแนน</p>}
+          </div>}
         </div>}
       </div>}
     </> : data?.votingClosed ? <p className="mt-4 text-[#d4a65a]">ปิดโหวตแล้ว · ผลคะแนนแสดงเฉพาะ Moderator</p> : <>
