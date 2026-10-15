@@ -29,6 +29,13 @@ export async function GET(request: Request) {
   }
   const { data: players, error } = await admin.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (error) return NextResponse.json({ error: 'โหลดรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
+  // Only the room moderator receives all roles; regular players receive only their own.
+  let moderatorRoles: Record<string, string> | undefined
+  if (isOwner && game.phase !== 'lobby') {
+    const { data: roles, error: rolesError } = await admin.from('game_roles').select('player_id, role').eq('game_id', game.id)
+    if (rolesError) return NextResponse.json({ error: 'โหลดบทบาทผู้เล่นไม่สำเร็จ' }, { status: 500 })
+    moderatorRoles = Object.fromEntries((roles ?? []).map(r => [r.player_id, r.role]))
+  }
   // Only the authenticated player may receive their own secret role.
   let ownRole: 'werewolf' | 'villager' | null = null
   let teammates: string[] = []
@@ -43,7 +50,7 @@ export async function GET(request: Request) {
       teammates = (players ?? []).filter(player => wolfIds.includes(player.id)).map(player => player.display_name)
     }
   }
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId, ownRole, teammates }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
