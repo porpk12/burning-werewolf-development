@@ -1,12 +1,14 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Copy, Plus, QrCode, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type Room = { id: string; room_code: string; player_limit: number; werewolf_count: number; phase: string; lobby_open: boolean }
 
 export function RoomControls() {
+  const router = useRouter()
   const [mode, setMode] = useState<'closed' | 'create' | 'join'>('closed')
   const [room, setRoom] = useState<Room | null>(null)
   const [roomCode, setRoomCode] = useState('')
@@ -32,7 +34,7 @@ export function RoomControls() {
       } else if (action === 'create') {
         setRoom(result.game)
       } else {
-        setMessage(`เข้าร่วมห้องสำเร็จ: ${result?.player?.display_name ?? displayName} — รหัส ${roomCode.trim().toUpperCase()}`)
+        router.push(`/lobby/${roomCode.trim().toUpperCase()}`)
       }
     } catch {
       setMessage('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง')
