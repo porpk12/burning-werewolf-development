@@ -95,8 +95,10 @@ export async function PATCH(request: Request) {
   if (!isModerator) return NextResponse.json({ error: 'เฉพาะ Moderator เท่านั้น' }, { status: 403 })
   if (game.phase !== 'day') return NextResponse.json({ error: 'ยังไม่ใช่ช่วงกลางวัน' }, { status: 409 })
   if (game.voting_closed) return NextResponse.json({ error: 'ปิดโหวตไปแล้ว' }, { status: 409 })
-  const { data, error } = await db.from('games').update({ voting_closed: true }).eq('id', game.id).eq('phase', 'day').eq('voting_closed', false).select('id').maybeSingle()
-  if (error) return NextResponse.json({ error: 'ปิดโหวตไม่สำเร็จ' }, { status: 500 })
-  if (!data) return NextResponse.json({ error: 'ปิดโหวตไปแล้ว หรือสถานะเกมเปลี่ยน' }, { status: 409 })
-  return NextResponse.json({ ok: true })
+  const { data, error } = await db.rpc('close_day_vote_and_exile', { p_game_id: game.id })
+  if (error) {
+    console.error('Close vote and exile failed', error)
+    return NextResponse.json({ error: 'ปิดโหวตหรือประมวลผลการเนรเทศไม่สำเร็จ กรุณาตรวจสอบ SQL migration' }, { status: 500 })
+  }
+  return NextResponse.json({ ok: true, result: data })
 }
