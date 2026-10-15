@@ -53,11 +53,13 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
   // Summarize only real players; the "ไม่มี" abstention is not a player.
   const voteTotals = data?.totals ?? []
   const maxTrust = voteTotals.length ? Math.max(...voteTotals.map(p => p.trust)) : 0
-  const minTrust = voteTotals.length ? Math.min(...voteTotals.map(p => p.trust)) : 0
   const mostTrusted = voteTotals.filter(p => p.trust === maxTrust).map(p => p.name).join(', ')
-  const leastTrusted = voteTotals.filter(p => p.trust === minTrust).map(p => p.name).join(', ')
   const maxDistrust = voteTotals.length ? Math.max(...voteTotals.map(p => p.distrust)) : 0
+  const mostDistrusted = voteTotals.filter(p => p.distrust === maxDistrust).map(p => p.name).join(', ')
   const topDistrusted = voteTotals.filter(p => p.distrust === maxDistrust)
+  const playerOrder = new Map((data?.players ?? []).map((p, i) => [p.id, p.seat_number ?? i]))
+  const orderedDetails = [...(data?.details ?? [])].sort((a, b) => (playerOrder.get(a.voterId) ?? Infinity) - (playerOrder.get(b.voterId) ?? Infinity))
+  const orderedTotals = [...voteTotals].sort((a, b) => (playerOrder.get(a.id) ?? Infinity) - (playerOrder.get(b.id) ?? Infinity))
   // Day 1 is always safe. From Day 2 onward a unique top distrust with zero trust is exiled.
   const exiledName = data?.round === 1 || maxDistrust === 0 || topDistrusted.length !== 1 || topDistrusted[0].trust !== 0
     ? null : topDistrusted[0].name
@@ -70,8 +72,8 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
       {navigation}
       {data.votingClosed && <div className="mt-4 rounded border border-[#d4a65a] p-3" role="status">
         <h3 className="font-semibold text-[#d4a65a]">สรุปผลการลงคะแนน — Day {data.round}</h3>
-        <p className="mt-3">เชื่อใจมากที่สุด: <strong>{mostTrusted || 'ไม่มีข้อมูล'} ({maxTrust} คะแนน)</strong></p>
-        <p className="mt-2">เชื่อใจน้อยที่สุด: <strong>{leastTrusted || 'ไม่มีข้อมูล'} ({minTrust} คะแนน)</strong></p>
+        <p className="mt-3">ไม่เชื่อใจมากที่สุด: <strong>{mostDistrusted || 'ไม่มีข้อมูล'} ({maxDistrust} คะแนน)</strong></p>
+        <p className="mt-2">เชื่อใจมากที่สุด: <strong>{mostTrusted || 'ไม่มีข้อมูล'} ({maxTrust} คะแนน)</strong></p>
         <p className="mt-3 font-semibold">{exiledName ? `☠ ถูกเนรเทศ: ${exiledName}` : 'ไม่มีใครถูกเนรเทศ'}</p>
         {data.round === 1 && <p className="mt-1 text-sm text-[#b7aaa0]">Day 1 ไม่มีการเนรเทศ ไม่ว่าผลคะแนนจะเป็นอย่างไร</p>}
         <button type="button" aria-expanded={showDetails} onClick={() => setShowDetails(value => !value)} className="mt-4 flex w-full items-center justify-between rounded border border-[#6e4e2f] px-3 py-3 text-left font-semibold">
@@ -84,14 +86,14 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
           </div>
           {detailTab === 'individual' ? <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead><tr className="border-b border-[#6e4e2f] text-[#d4a65a]"><th className="p-2">ผู้โหวต</th><th className="p-2">ไม่เชื่อใจ</th><th className="p-2">เชื่อใจ</th></tr></thead>
-              <tbody>{data.details?.map(d => <tr key={d.voterId} className="border-b border-[#4b3226]"><td className="p-2">{d.voterName}</td><td className="p-2">{displayName(d.distrust)}</td><td className="p-2">{displayName(d.trust)}</td></tr>)}</tbody>
+              <thead><tr className="border-b border-[#6e4e2f] text-[#d4a65a]"><th className="p-2">ผู้เล่น</th><th className="p-2">ไม่เชื่อใจ</th><th className="p-2">เชื่อใจ</th></tr></thead>
+              <tbody>{orderedDetails.map(d => <tr key={d.voterId} className="border-b border-[#4b3226]"><td className="p-2">{d.voterName}</td><td className="p-2">{displayName(d.distrust)}</td><td className="p-2">{displayName(d.trust)}</td></tr>)}</tbody>
             </table>
             {!data.details?.length && <p className="mt-2 text-sm text-[#b7aaa0]">ไม่มีข้อมูลการลงคะแนน</p>}
           </div> : <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead><tr className="border-b border-[#6e4e2f] text-[#d4a65a]"><th className="p-2">ผู้เล่น</th><th className="p-2">ไม่เชื่อใจ</th><th className="p-2">เชื่อใจ</th></tr></thead>
-              <tbody>{data.totals?.map(t => <tr key={t.id} className="border-b border-[#4b3226]"><td className="p-2">{t.name}</td><td className="p-2">{t.distrust}</td><td className="p-2">{t.trust}</td></tr>)}</tbody>
+              <tbody>{orderedTotals.map(t => <tr key={t.id} className="border-b border-[#4b3226]"><td className="p-2">{t.name}</td><td className="p-2">{t.distrust}</td><td className="p-2">{t.trust}</td></tr>)}</tbody>
             </table>
             {!data.totals?.length && <p className="mt-2 text-sm text-[#b7aaa0]">ไม่มีข้อมูลคะแนน</p>}
           </div>}
