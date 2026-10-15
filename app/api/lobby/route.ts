@@ -44,8 +44,8 @@ export async function POST(request: Request) {
   if (game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้เริ่มเกมแล้ว' }, { status: 409 })
   const { data: players, error: playerError } = await admin.from('game_players').select('id').eq('game_id', game.id).neq('status', 'removed')
   if (playerError || !players) return NextResponse.json({ error: 'อ่านรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
-  if (players.length !== game.player_limit) return NextResponse.json({ error: `ต้องมีผู้เล่นครบ ${game.player_limit} คนก่อนเริ่มเกม (ขณะนี้ ${players.length} คน)` }, { status: 409 })
-  if (game.werewolf_count >= players.length) return NextResponse.json({ error: 'จำนวนหมาป่าไม่ถูกต้อง' }, { status: 400 })
+  if (players.length < 2) return NextResponse.json({ error: 'ต้องมีผู้เล่นอย่างน้อย 2 คนก่อนเริ่มเกม' }, { status: 409 })
+  if (game.werewolf_count < 1 || game.werewolf_count >= players.length) return NextResponse.json({ error: `จำนวนผู้เล่นต้องมากกว่าจำนวนหมาป่า (${game.werewolf_count} คน)` }, { status: 400 })
   // Claim the start transition first so repeated requests cannot assign roles twice.
   const { data: claimed, error: claimError } = await admin.from('games').update({ phase: 'night_zero', lobby_open: false, started_at: new Date().toISOString() }).eq('id', game.id).eq('phase', 'lobby').select('id').maybeSingle()
   if (claimError || !claimed) return NextResponse.json({ error: 'ห้องกำลังเริ่มเกมหรือเริ่มแล้ว' }, { status: 409 })
