@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getModerator } from '@/lib/supabase/auth'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 function getAdminClient() {
@@ -20,14 +21,29 @@ function sessionHash(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const code = url.searchParams.get('code')?.trim().toUpperCase() ?? ''
+  if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
+  const admin = getAdminClient()
+  const { data: game } = await admin.from('games').select('id, room_code, phase, round_number, lobby_open, player_limit').eq('room_code', code).maybeSingle()
+  if (!game) return NextResponse.json({ error: 'ไม่พบห้องนี้' }, { status: 404 })
+  const token = request.headers.get('cookie')?.split(';').map((item) => item.trim()).find((item) => item.startsWith(`bwf_player_${game.id}=`))?.split('=').slice(1).join('=')
+  if (!token) return NextResponse.json({ error: 'ต้องเข้าร่วมห้องก่อน' }, { status: 401 })
+  const { data: player } = await admin.from('game_players').select('id, game_id, display_name, seat_number, status').eq('game_id', game.id).eq('session_token_hash', sessionHash(token)).maybeSingle()
+  if (!player) return NextResponse.json({ error: 'เซสชันผู้เล่นไม่ถูกต้อง' }, { status: 401 })
+  await admin.from('game_players').update({ last_seen_at: new Date().toISOString(), status: 'connected' }).eq('id', player.id)
+  return NextResponse.json({ game, player })
+}
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const action = body?.action
 
   if (action === 'create') {
+    const moderator = await getModerator()
+    if (!moderator) return NextResponse.json({ error: 'ต้องเข้าสู่ระบบในฐานะผู้ดูแลก่อนสร้างห้อง' }, { status: 401 })
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'ต้องเข้าสู่ระบบในฐานะผู้ดูแลก่อนสร้างห้อง' }, { status: 401 })
 
     const rulesetId = typeof body.rulesetId === 'string' ? body.rulesetId : 'burning-night'
     const rulesetVersion = typeof body.rulesetVersion === 'string' ? body.rulesetVersion : '2.4'
