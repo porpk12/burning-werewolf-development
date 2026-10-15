@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
-type LobbyData = { game: { room_code: string; phase: string; player_limit: number; lobby_open: boolean }; players: Player[]; isModerator: boolean; selfId: string | null }
+type LobbyData = { game: { room_code: string; phase: string; {players.length} คน: number; lobby_open: boolean }; players: Player[]; isModerator: boolean; selfId: string | null }
 
 export function LobbyView({ code, moderator = false }: { code: string; moderator?: boolean }) {
   const router = useRouter()
