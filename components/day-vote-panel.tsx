@@ -48,6 +48,17 @@ export function DayVotePanel({ code }: { code: string }) {
     if (trust && trust !== 'NO' && !data.players.some(p => p.id === trust && p.status === 'connected' && p.id !== data.selfId && !data.blockedTrustIds.includes(p.id))) setTrust('')
     if (distrust && distrust !== 'NO' && !data.players.some(p => p.id === distrust && p.status === 'connected')) setDistrust('')
   }, [data, trust, distrust])
+  // Summarize only real players; the "ไม่มี" abstention is not a player.
+  const voteTotals = data?.totals ?? []
+  const maxTrust = voteTotals.length ? Math.max(...voteTotals.map(p => p.trust)) : 0
+  const minTrust = voteTotals.length ? Math.min(...voteTotals.map(p => p.trust)) : 0
+  const mostTrusted = voteTotals.filter(p => p.trust === maxTrust).map(p => p.name).join(', ')
+  const leastTrusted = voteTotals.filter(p => p.trust === minTrust).map(p => p.name).join(', ')
+  const maxDistrust = voteTotals.length ? Math.max(...voteTotals.map(p => p.distrust)) : 0
+  const topDistrusted = voteTotals.filter(p => p.distrust === maxDistrust)
+  // Day 1 is always safe. From Day 2 onward a unique top distrust with zero trust is exiled.
+  const exiledName = data?.round === 1 || maxDistrust === 0 || topDistrusted.length !== 1 || topDistrusted[0].trust !== 0
+    ? null : topDistrusted[0].name
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Day {data?.round ?? 1} — ลงคะแนนลับ</h2>
     {data?.isModerator ? <>
@@ -57,10 +68,12 @@ export function DayVotePanel({ code }: { code: string }) {
       <div className="mt-3 space-y-2">{data.totals?.map(t => <div key={t.id} className="rounded border border-[#4b3226] p-2">{t.name} — ไม่เชื่อใจ {t.distrust} · เชื่อใจ {t.trust}</div>)}
         <div className="rounded border border-[#4b3226] p-2">ไม่มี — ไม่เชื่อใจ {data.noTotals?.distrust ?? 0} · เชื่อใจ {data.noTotals?.trust ?? 0}</div>
       </div>
-      {data.votingClosed && data.exileResult && <div className="mt-4 rounded border border-[#d4a65a] p-3" role="status">
-        <h3 className="font-semibold text-[#d4a65a]">สรุปผลการเนรเทศ — Day {data.round}</h3>
-        <p className="mt-2 font-semibold">{data.exileResult.playerName ? `ผู้ถูกเนรเทศ: ${data.exileResult.playerName}` : 'ไม่มีใครถูกเนรเทศ'}</p>
-        <p className="mt-1 text-sm text-[#b7aaa0]">{data.exileResult.reason}</p>
+      {data.votingClosed && <div className="mt-4 rounded border border-[#d4a65a] p-3" role="status">
+        <h3 className="font-semibold text-[#d4a65a]">สรุปผลการลงคะแนน — Day {data.round}</h3>
+        <p className="mt-3">เชื่อใจมากที่สุด: <strong>{mostTrusted || 'ไม่มีข้อมูล'} ({maxTrust} คะแนน)</strong></p>
+        <p className="mt-2">เชื่อใจน้อยที่สุด: <strong>{leastTrusted || 'ไม่มีข้อมูล'} ({minTrust} คะแนน)</strong></p>
+        <p className="mt-3 font-semibold">{exiledName ? `☠ ถูกเนรเทศ: ${exiledName}` : 'ไม่มีใครถูกเนรเทศ'}</p>
+        {data.round === 1 && <p className="mt-1 text-sm text-[#b7aaa0]">Day 1 ไม่มีการเนรเทศ ไม่ว่าผลคะแนนจะเป็นอย่างไร</p>}
       </div>}
       <h3 className="mt-5 font-semibold">รายละเอียดการลงคะแนน (เฉพาะ Moderator)</h3>
       <div className="mt-2 space-y-2">{data.details?.map(d => <div key={d.voterId} className="rounded border border-[#4b3226] p-2 text-sm">{d.voterName} → ไม่เชื่อใจ: {displayName(d.distrust)} · เชื่อใจ: {displayName(d.trust)}</div>)}</div>
