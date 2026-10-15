@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   }
   const { data: players, error } = await admin.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (error) return NextResponse.json({ error: 'โหลดรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -37,10 +37,19 @@ export async function POST(request: Request) {
   if (!moderator) return NextResponse.json({ error: 'ต้องเข้าสู่ระบบ Moderator' }, { status: 403 })
   const body = await request.json().catch(() => null)
   const code = typeof body?.code === 'string' ? body.code.trim().toUpperCase() : ''
-  if (!['start', 'restart'].includes(body?.action) || !/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'คำสั่งไม่ถูกต้อง' }, { status: 400 })
+  if (!['start', 'restart', 'settings'].includes(body?.action) || !/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'คำสั่งไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
   const { data: game } = await admin.from('games').select('id, phase, player_limit, werewolf_count, moderator_id').eq('room_code', code).eq('moderator_id', moderator.id).maybeSingle()
   if (!game) return NextResponse.json({ error: 'ไม่พบห้องของผู้ดูแล' }, { status: 404 })
+  if (body.action === 'settings') {
+    if (game.phase !== 'lobby') return NextResponse.json({ error: 'ตั้งค่าเกมได้เฉพาะตอนอยู่ Lobby' }, { status: 409 })
+    const count = body.werewolfCount
+    if (!Number.isSafeInteger(count) || count < 1 || count > 1000) return NextResponse.json({ error: 'จำนวนหมาป่าต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 1000' }, { status: 400 })
+    const { data: updated, error: updateError } = await admin.from('games')
+      .update({ werewolf_count: count }).eq('id', game.id).eq('phase', 'lobby').select('id').maybeSingle()
+    if (updateError || !updated) return NextResponse.json({ error: 'บันทึกการตั้งค่าไม่สำเร็จ กรุณาลองอีกครั้ง' }, { status: 409 })
+    return NextResponse.json({ ok: true, werewolfCount: count })
+  }
   if (body.action === 'restart') {
     if (game.phase === 'lobby') return NextResponse.json({ error: 'ห้องอยู่ใน Lobby อยู่แล้ว' }, { status: 409 })
     // Atomic reset in PostgreSQL. Only the authenticated room moderator can reach this branch.
