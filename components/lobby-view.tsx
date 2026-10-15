@@ -39,7 +39,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     <ul className="mt-3 space-y-2">{data?.players.map(player => <li key={player.id} className="rounded-md border border-[#4b3226] px-3 py-2">{player.seat_number}. {player.display_name} {player.id === data.selfId ? '(คุณ)' : ''}</li>)}</ul>
     {!data?.players.length && <p className="mt-3 text-sm text-[#988c83]">ยังไม่มีผู้เล่น</p>}
     {data?.game.phase === 'lobby' ? <p className="mt-6 text-sm text-[#d4a65a]">กำลังรอผู้เล่นและ Moderator เริ่มเกม · รายชื่ออัปเดตทุก 3 วินาที</p> : <p className="mt-6 text-sm text-[#d4a65a]">เริ่มเกมแล้ว: {data?.game.phase} · ระบบการเล่นแต่ละเฟสยังอยู่ระหว่างพัฒนา</p>}
-    {moderator && data?.isModerator && data.game.phase === 'lobby' && <button disabled={busy || data.players.length !== data.game.player_limit} onClick={() => void start()} className="mt-5 rounded-md bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'กำลังเริ่ม…' : 'เริ่มเกม (Night 0)'}</button>}
+    {moderator && data?.isModerator && data.game.phase === 'lobby' && <button disabled={busy || data.players.length < 2} onClick={() => void start()} className="mt-5 rounded-md bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'กำลังเริ่ม…' : 'เริ่มเกมด้วยผู้เล่นที่อยู่ในห้อง (Night 0)'}</button>}
     {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
     <div className="mt-6 flex gap-4"><button className="text-sm underline" onClick={() => void refresh()}>รีเฟรชรายชื่อ</button><button className="text-sm underline" onClick={() => router.push(moderator ? '/mod' : '/')}>กลับหน้าหลัก</button></div>
   </div></main>
