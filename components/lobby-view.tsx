@@ -6,7 +6,7 @@ import { NightZeroPanel } from '@/components/night-zero-panel'
 import { DayVotePanel } from '@/components/day-vote-panel'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
-type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean }; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[] }
+type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean }; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
 
 export function LobbyView({ code, moderator = false }: { code: string; moderator?: boolean }) {
   const router = useRouter()
@@ -15,6 +15,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   const [busy, setBusy] = useState(false)
   const [confirmRestart, setConfirmRestart] = useState(false)
   const [showOwnRole, setShowOwnRole] = useState(false)
+  const [visibleRoles, setVisibleRoles] = useState<Record<string, boolean>>({})
   const [wolfCount, setWolfCount] = useState(1)
   const [settingsChanged, setSettingsChanged] = useState(false)
   const refresh = useCallback(async () => {
@@ -75,6 +76,14 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     <p className="mt-5 text-sm text-[#b7aaa0]">รหัสห้อง</p><div className="mt-1 flex items-center gap-4"><strong className="text-3xl tracking-widest text-[#d4a65a]">{code}</strong><button className="rounded border border-[#6e4e2f] px-3 py-2 text-sm" onClick={() => void navigator.clipboard.writeText(code)}>คัดลอก</button></div>
     <div className="mt-6 flex items-center justify-between"><h2 className="text-lg font-semibold">ผู้เล่นในห้อง</h2><span>{data?.players.length ?? '…'} คน</span></div>
     <ul className="mt-3 space-y-2">{data?.players.map(player => <li key={player.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#4b3226] px-3 py-2"><span>{player.seat_number}. {player.display_name} {player.id === data.selfId ? '(คุณ)' : ''}</span>{data.game.phase !== 'lobby' && <span className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-emerald-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ มีชีวิต'}</span>}</li>)}</ul>
+    {moderator && data?.isModerator && data.game.phase !== 'lobby' && <section className="mt-5 rounded-lg border border-[#6e4e2f] p-4">
+      <h2 className="font-semibold text-[#d4a65a]">สถานะผู้เล่นในเกม</h2>
+      <p className="mt-1 text-xs text-[#b7aaa0]">เฉพาะ Moderator · ดูบทบาทได้ทุก Phase</p>
+      <div className="mt-3 space-y-2">{data.players.map(player => <div key={player.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#4b3226] p-3">
+        <div><p className="font-medium">{player.display_name}</p><p className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-green-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ มีชีวิต'}</p></div>
+        <div className="flex items-center gap-3"><span className="text-sm text-[#d4a65a]">{visibleRoles[player.id] ? (data.moderatorRoles?.[player.id] === 'werewolf' ? 'หมาป่า' : data.moderatorRoles?.[player.id] === 'villager' ? 'ชาวบ้าน' : 'ยังไม่มีบทบาท') : '••••••'}</span><button type="button" onClick={() => setVisibleRoles(prev => ({ ...prev, [player.id]: !prev[player.id] }))} className="rounded border border-[#6e4e2f] px-3 py-2 text-sm">{visibleRoles[player.id] ? 'ซ่อนบทบาท' : 'ดูบทบาท'}</button></div>
+      </div>)}</div>
+    </section>}
     {!moderator && data?.game.phase !== 'lobby' && <section className="mt-5 rounded-lg border border-[#6e4e2f] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold text-[#d4a65a]">บทบาทของฉัน</h2><button type="button" onClick={() => setShowOwnRole(value => !value)} className="rounded-md border border-[#d4a65a] px-3 py-2 text-sm text-[#d4a65a]">{showOwnRole ? 'ซ่อนบทบาท' : 'ดูบทบาท'}</button></div>
       {showOwnRole && <div className="mt-3 rounded-md bg-[#170f0d] p-3"><p className="font-semibold">{data?.ownRole === 'werewolf' ? '🐺 หมาป่า' : data?.ownRole === 'villager' ? 'ชาวบ้าน' : 'ยังไม่ได้รับบทบาท'}</p>{data?.ownRole === 'werewolf' && <p className="mt-2 text-sm text-[#b7aaa0]">เพื่อนร่วมทีมหมาป่า: {data.teammates?.length ? data.teammates.join(', ') : 'ไม่มี'}</p>}</div>}
