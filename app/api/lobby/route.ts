@@ -58,10 +58,26 @@ export async function POST(request: Request) {
   if (!moderator) return NextResponse.json({ error: 'ต้องเข้าสู่ระบบ Moderator' }, { status: 403 })
   const body = await request.json().catch(() => null)
   const code = typeof body?.code === 'string' ? body.code.trim().toUpperCase() : ''
-  if (!['start', 'restart', 'settings'].includes(body?.action) || !/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'คำสั่งไม่ถูกต้อง' }, { status: 400 })
+  if (!['start', 'restart', 'settings', 'kick'].includes(body?.action) || !/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'คำสั่งไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
   const { data: game } = await admin.from('games').select('id, phase, player_limit, werewolf_count, moderator_id').eq('room_code', code).eq('moderator_id', moderator.id).maybeSingle()
   if (!game) return NextResponse.json({ error: 'ไม่พบห้องของผู้ดูแล' }, { status: 404 })
+  if (body.action === 'kick') {
+    const playerId = typeof body.playerId === 'string' ? body.playerId : ''
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(playerId)) {
+      return NextResponse.json({ error: 'รหัสผู้เล่นไม่ถูกต้อง' }, { status: 400 })
+    }
+    // Soft removal preserves previous game history, while excluding the player from the room.
+    const { data: kicked, error: kickError } = await admin.from('game_players')
+      .update({ status: 'removed' }).eq('game_id', game.id).eq('id', playerId)
+      .neq('status', 'removed').select('id').maybeSingle()
+    if (kickError) {
+      console.error('Kick player failed:', kickError)
+      return NextResponse.json({ error: 'เตะผู้เล่นไม่สำเร็จ' }, { status: 500 })
+    }
+    if (!kicked) return NextResponse.json({ error: 'ไม่พบผู้เล่นที่ยังอยู่ในห้อง' }, { status: 404 })
+    return NextResponse.json({ ok: true })
+  }
   if (body.action === 'settings') {
     if (game.phase !== 'lobby') return NextResponse.json({ error: 'ตั้งค่าเกมได้เฉพาะตอนอยู่ Lobby' }, { status: 409 })
     const count = body.werewolfCount
