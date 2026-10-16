@@ -70,11 +70,8 @@ export async function POST(request:Request){
  }
  if(body?.action==='publish'){
   if(!isModerator) return NextResponse.json({error:'เฉพาะ Moderator'},{status:403})
-  const {data:round}=await db.from('night_ability_rounds').select('resolved').eq('game_id',game.id).eq('round_number',game.round_number).maybeSingle()
-  if(!round?.resolved) return NextResponse.json({error:'ต้องตัดสินใจเรื่องการเผาก่อน'},{status:409})
-  const {data:unfinished}=await db.from('night_ability_messages').select('player_id').eq('game_id',game.id).eq('round_number',game.round_number).eq('message','รอ Moderator ระบุเบาะแสลับ')
-  if(unfinished?.length) return NextResponse.json({error:'กรุณาเขียนเบาะแสห้องสมุดก่อนส่งทั้งหมด'},{status:409})
-  const {error}=await db.from('night_ability_messages').update({published:true}).eq('game_id',game.id).eq('round_number',game.round_number)
+  if(!Array.isArray(body.messages)||body.messages.some((m:unknown)=>!m||typeof m!=='object'||typeof (m as {playerId?:unknown}).playerId!=='string'||typeof (m as {message?:unknown}).message!=='string'||(m as {message:string}).message.length>2000)) return NextResponse.json({error:'ข้อมูลผลความสามารถไม่ถูกต้อง'},{status:400})
+  const {error}=await db.rpc('publish_night_ability_messages',{p_game_id:game.id,p_messages:body.messages.map((m:{playerId:string;message:string})=>({player_id:m.playerId,message:m.message}))})
   if(error) return NextResponse.json({error:error.message},{status:409})
   return NextResponse.json({ok:true})
  }
