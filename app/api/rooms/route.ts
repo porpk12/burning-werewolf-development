@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     if (existing) return NextResponse.json({ error: 'ชื่อนี้ถูกใช้ในห้องแล้ว' }, { status: 409 })
 
     const token = randomBytes(32).toString('base64url')
-    const { data: lastSeat, error: seatError } = await getAdminClient().from('game_players').select('seat_number').eq('game_id', game.id).order('seat_number', { ascending: false }).limit(1).maybeSingle()
+    const { data: lastSeat, error: seatError } = await getAdminClient().from('game_players').select('seat_number').eq('game_id', game.id).neq('status', 'removed').order('seat_number', { ascending: false }).limit(1).maybeSingle()
     if (seatError) return NextResponse.json({ error: 'ไม่สามารถจัดลำดับผู้เล่นได้' }, { status: 500 })
     const seat = (lastSeat?.seat_number ?? 0) + 1
     const { data: player, error } = await getAdminClient().from('game_players').insert({ game_id: game.id, display_name: displayName, seat_number: seat, session_token_hash: sessionHash(token) }).select('id, game_id, display_name, seat_number, status').single()
