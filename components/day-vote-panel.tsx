@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 type Player = { id: string; display_name: string; seat_number: number; status: string }
-type VoteData = { votingClosed: boolean; noTotals?: { trust: number; distrust: number }; details?: { voterId: string; voterName: string; trust: string | null; distrust: string | null }[]; isModerator: boolean; round: number; selfId: string | null; players: Player[]; blockedTrustIds: string[]; ownVote: { trust: string | null; distrust: string | null } | null; submittedCount: number; exileResult?: { playerId: string | null; playerName: string | null; reason: string }; totals?: { id: string; name: string; trust: number; distrust: number }[] }
+type VoteData = { votingClosed: boolean; noTotals?: { trust: number; distrust: number }; details?: { voterId: string; voterName: string; trust: string | null; distrust: string | null }[]; isModerator: boolean; round: number; selfId: string | null; players: Player[]; blockedTrustIds: string[]; ownVote: { trust: string | null; distrust: string | null } | null; submittedCount: number; marketBonus?: {target:string|null;used:boolean}|null; marketBonuses?: {player_id:string;target_player_id:string|null;used:boolean}[]; exileResult?: { playerId: string | null; playerName: string | null; reason: string }; totals?: { id: string; name: string; trust: number; distrust: number; shielded?: boolean }[] }
 export function DayVotePanel({ code, navigation }: { code: string; navigation?: ReactNode }) {
   const [data, setData] = useState<VoteData | null>(null)
   const [trust, setTrust] = useState('')
@@ -30,6 +30,10 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
       else { await refresh(); window.alert('บันทึกคะแนนแล้ว') }
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
     finally { setBusy(false) }
+  }
+  async function submitMarket(target:string){
+    setBusy(true);setError('')
+    try{const r=await fetch('/api/day-vote',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code,action:'market',target})});const j=await r.json();if(!r.ok)throw new Error(j.error??'บันทึกไม่ได้');await refresh()}catch(e){setError(e instanceof Error?e.message:'บันทึกไม่ได้')}finally{setBusy(false)}
   }
   async function closeVote() {
     if (!window.confirm('ยืนยันปิดโหวต? ผู้เล่นจะไม่สามารถแก้คะแนนได้อีก')) return
@@ -62,7 +66,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
   const orderedTotals = [...voteTotals].sort((a, b) => (playerOrder.get(a.id) ?? Infinity) - (playerOrder.get(b.id) ?? Infinity))
   // Day 1 is safe; on later days all tied top-distrust players with zero trust are exiled.
   const exiledNames = data?.round === 1 || maxDistrust === 0
-    ? [] : topDistrusted.filter(p => p.trust === 0).map(p => p.name)
+    ? [] : topDistrusted.filter(p => p.trust === 0 && !p.shielded).map(p => p.name)
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Day {data?.round ?? 1} — ลงคะแนนลับ</h2>
     {data?.isModerator ? <>
@@ -70,6 +74,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
       <p className="mt-2 text-sm text-[#b7aaa0]">สถานะ: {data.votingClosed ? 'ปิดโหวตแล้ว' : 'เปิดโหวตอยู่'} · เฉพาะ Moderator เห็นผล</p>
       {!data.votingClosed && <button type="button" disabled={busy} onClick={() => void closeVote()} className="mt-3 rounded bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">{busy ? 'กำลังปิด…' : 'ปิดโหวต'}</button>}
       {navigation}
+      {data.marketBonuses?.length ? <p className="mt-3 text-sm text-[#d4a65a]">🛒 คะแนนตลาด (เฉพาะ Mod): {data.marketBonuses.map(b=>`${displayName(b.player_id)} → ${b.used?displayName(b.target_player_id):'ยังไม่ใช้'}`).join(' · ')}</p>:null}
       {data.votingClosed && <div className="mt-4 rounded border border-[#d4a65a] p-3" role="status">
         <h3 className="font-semibold text-[#d4a65a]">สรุปผลการลงคะแนน — Day {data.round}</h3>
         <p className="mt-3">ไม่เชื่อใจมากที่สุด: <strong>{mostDistrusted || 'ไม่มีข้อมูล'} ({maxDistrust} คะแนน)</strong></p>
@@ -104,6 +109,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
       <label className="mt-4 block text-sm">ไม่เชื่อใจ</label><select value={distrust} onChange={e => setDistrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{distrustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <label className="mt-4 block text-sm">เชื่อใจ</label><select value={trust} onChange={e => setTrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{trustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <button type="button" disabled={busy || !trust || !distrust} onClick={() => void submit()} className="mt-4 rounded bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">{busy ? 'กำลังบันทึก…' : data?.ownVote ? 'แก้ไขคะแนน' : 'ยืนยันคะแนน'}</button>
+      {data?.marketBonus && <div className="mt-4 rounded border border-[#d4a65a] p-3"><p className="font-semibold">🛒 สิทธิ์ตลาด: ไม่เชื่อใจเพิ่มอีก 1 เสียง</p><p className="mt-1 text-xs text-[#b7aaa0]">เลือกคนเดิมซ้ำหรือคนอื่นก็ได้ · ข้อมูลนี้เป็นความลับ</p><select disabled={busy} defaultValue={data.marketBonus.target??''} key={data.marketBonus.target??'unset'} onChange={e=>{if(e.target.value)void submitMarket(e.target.value)}} className="mt-2 w-full rounded bg-[#2b201b] p-3"><option value="">-- เลือกผู้รับคะแนนพิเศษ --</option>{distrustChoices.map(p=><option key={p.id} value={p.id}>{p.display_name}</option>)}</select></div>}
       {data?.ownVote && <p className="mt-2 text-sm text-[#d4a65a]">คุณลงคะแนนแล้ว สามารถเปลี่ยนได้ระหว่าง Day นี้</p>}
     </>}
     {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
