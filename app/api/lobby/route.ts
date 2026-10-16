@@ -29,6 +29,19 @@ export async function GET(request: Request) {
   }
   const { data: players, error } = await admin.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (error) return NextResponse.json({ error: 'โหลดรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
+  // An exile is resolved at vote close, but only announced on entering the next Night.
+  // Mask only *today's* new exiles while in Day; earlier exiles remain visible.
+  const { data: exileEvents, error: exileError } = await admin.from('bw_exile_events')
+    .select('player_id, day_number').eq('game_id', game.id)
+  if (exileError) return NextResponse.json({ error: 'โหลดข้อมูลการประกาศเนรเทศไม่สำเร็จ กรุณารัน SQL migration ล่าสุด' }, { status: 500 })
+  const hiddenIds = new Set(game.phase === 'day' && !isOwner
+    ? (exileEvents ?? []).filter(e => e.day_number === game.round_number).map(e => e.player_id)
+    : [])
+  const visiblePlayers = (players ?? []).map(p => hiddenIds.has(p.id) ? { ...p, status: 'connected' } : p)
+  const latestExiles = game.phase === 'night' && !isOwner
+    ? (exileEvents ?? []).filter(e => e.day_number === game.round_number).map(e => e.player_id)
+    : []
+  const latestExileNames = (players ?? []).filter(p => latestExiles.includes(p.id)).map(p => p.display_name)
   // Only the room moderator receives all roles; regular players receive only their own.
   let moderatorRoles: Record<string, string> | undefined
   if (isOwner && game.phase !== 'lobby') {
@@ -52,7 +65,7 @@ export async function GET(request: Request) {
   }
   const { count: burnedCount, error: burnedError } = await admin.from('night_burned_locations')
     .select('location_id', { count: 'exact', head: true }).eq('game_id', game.id)
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: isOwner ? (players ?? []) : visiblePlayers, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
