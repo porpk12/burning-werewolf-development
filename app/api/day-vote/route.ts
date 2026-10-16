@@ -38,6 +38,15 @@ export async function GET(request: Request) {
   if (game.phase !== 'day') return NextResponse.json({ error: 'ยังไม่ใช่ช่วงกลางวัน' }, { status: 409 })
   const { data: players, error: playerError } = await db.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (playerError) return NextResponse.json({ error: 'โหลดรายชื่อไม่สำเร็จ' }, { status: 500 })
+  // Do not expose today's newly eliminated players before the moderator advances to Night.
+  let visiblePlayers = players ?? []
+  if (!isModerator) {
+    const { data: hiddenEvents, error: hiddenError } = await db.from('bw_exile_events')
+      .select('player_id').eq('game_id', game.id).eq('day_number', game.round_number)
+    if (hiddenError) return NextResponse.json({ error: 'โหลดสถานะการเนรเทศไม่สำเร็จ' }, { status: 500 })
+    const hiddenIds = new Set((hiddenEvents ?? []).map(e => e.player_id))
+    visiblePlayers = (players ?? []).map(p => hiddenIds.has(p.id) ? { ...p, status: 'connected' } : p)
+  }
   const { data: rows, error: voteError } = await db.from('votes').select('voter_player_id, trust_target_player_id, distrust_target_player_id').eq('game_id', game.id).eq('round_number', game.round_number)
   if (voteError) return NextResponse.json({ error: 'โหลดคะแนนไม่สำเร็จ' }, { status: 500 })
   const { data: roles, error: rolesError } = await db.from('game_roles').select('player_id, role').eq('game_id', game.id)
@@ -51,7 +60,7 @@ export async function GET(request: Request) {
   const totals = isModerator ? (players ?? []).map(p => ({ id: p.id, name: p.display_name, trust: rows?.filter(v => v.trust_target_player_id === p.id).length ?? 0, distrust: (rows?.filter(v => v.distrust_target_player_id === p.id).length ?? 0)+(bonusRows?.filter(b=>b.used&&b.target_player_id===p.id).length??0),shielded:shieldRows?.some(s=>s.player_id===p.id)??false })) : undefined
   const details = isModerator ? (rows ?? []).map(v => ({ voterId: v.voter_player_id, voterName: players?.find(p => p.id === v.voter_player_id)?.display_name ?? 'ไม่ทราบชื่อ', trust: v.trust_target_player_id, distrust: v.distrust_target_player_id })) : undefined
   const noTotals = isModerator ? { trust: rows?.filter(v => v.trust_target_player_id === null).length ?? 0, distrust: rows?.filter(v => v.distrust_target_player_id === null).length ?? 0 } : undefined
-  return NextResponse.json({ votingClosed: game.voting_closed, marketBonus:ownBonus?{target:ownBonus.target_player_id,used:ownBonus.used}:null,marketBonuses:isModerator?bonusRows:undefined,details, noTotals, isModerator, round: game.round_number, selfId: playerId, players: players ?? [], blockedTrustIds: isModerator ? [] : blockedTrustIds, ownVote: own ? { trust: own.trust_target_player_id, distrust: own.distrust_target_player_id } : null, submittedCount: rows?.length ?? 0, totals }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ votingClosed: game.voting_closed, marketBonus:ownBonus?{target:ownBonus.target_player_id,used:ownBonus.used}:null,marketBonuses:isModerator?bonusRows:undefined,details, noTotals, isModerator, round: game.round_number, selfId: playerId, players: visiblePlayers, blockedTrustIds: isModerator ? [] : blockedTrustIds, ownVote: own ? { trust: own.trust_target_player_id, distrust: own.distrust_target_player_id } : null, submittedCount: rows?.length ?? 0, totals }, { headers: { 'Cache-Control': 'no-store' } })
 }
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
