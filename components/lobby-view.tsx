@@ -9,7 +9,7 @@ import { SpecialLocationPanel } from '@/components/special-location-panel'
 import { NeighborLetterPanel } from '@/components/neighbor-letter-panel'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
-type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
+type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean; winner?: 'werewolf' | 'villager' | null; win_reason?: string | null }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
 
 export function LobbyView({ code, moderator = false }: { code: string; moderator?: boolean }) {
   const router = useRouter()
@@ -109,6 +109,12 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <p className="mt-1 text-lg font-semibold text-[#d4a65a]">{data.game.phase === 'night_zero' ? '🌙 คืนที่ 0 · คืนเปิดเผยบทบาท' : `วันที่ ${data.game.round_number} · ${data.game.phase === 'night' ? `🌙 คืนที่ ${data.game.round_number}` : `คืนที่ ${Math.max(0, data.game.round_number - 1)} ผ่านไปแล้ว`}`}</p>
       <p className="mt-1 text-sm text-[#b7aaa0]">{data.game.phase === 'night_zero' ? 'คืนที่ 0 ไม่นับรวมในจำนวนคืนสูงสุด' : `จำนวนคืนสูงสุด ${data.game.player_limit && data.game.player_limit >= 11 ? 7 : data.players.length >= 11 ? 7 : 6} คืน · ไม่นับคืนที่ 0`}</p>
     </section>}
+    {data?.game.phase === 'finished' && <section role="status" className="mt-5 rounded-xl border-2 border-amber-500 bg-gradient-to-b from-[#3a1b12] to-[#170f0d] p-6 text-center">
+      <p className="text-sm tracking-widest text-amber-300">THE GAME IS OVER</p>
+      <h2 className="mt-3 text-3xl font-bold text-amber-100">{data.game.winner === 'werewolf' ? '🐺 หมาป่าชนะ!' : data.game.winner === 'villager' ? '🏘️ ชาวบ้านชนะ!' : 'เกมจบแล้ว'}</h2>
+      <p className="mt-3 text-sm text-amber-200">{{special_location_burned:'สถานที่พิเศษถูกเผาทำลาย',three_locations_remaining:'เหลือสถานที่ปลอดภัยไม่เกิน 3 แห่ง',all_wolves_exiled:'หมาป่าทั้งหมดถูกเนรเทศ',survived_final_night:'หมู่บ้านอยู่รอดจนจบคืนสุดท้าย'}[data.game.win_reason ?? ''] ?? 'สิ้นสุดการแข่งขัน'}</p>
+      <p className="mt-3 text-xs text-[#b7aaa0]">ปิดกิจกรรมทั้งหมดแล้ว · Moderator สามารถเริ่มเกมใหม่ในห้องเดิมได้</p>
+    </section>}
     {data && data.game.phase !== 'lobby' && <section className="mt-3 rounded-lg border border-orange-800/60 bg-[#291713] px-4 py-3 text-sm text-orange-200" role="status">🔥 สถานที่ถูกเผาแล้ว <strong>{data.burnedCount ?? 0}</strong> แห่ง จาก <strong>{data.players.length >= 11 ? 6 : 5}</strong> แห่ง</section>}
     {data?.game.phase === 'lobby' && <>
     <div className="mt-6 flex items-center justify-between"><h2 className="text-lg font-semibold">ผู้เล่นในห้อง</h2><span>{data?.players.length ?? '…'} คน</span></div>
@@ -169,12 +175,12 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
           </div>
         </div>}
     </div>}
-    {moderator && data?.isModerator && data.game.phase !== 'lobby' && data.game.phase !== 'day' && <div className="mt-4 flex flex-wrap gap-3">
+    {moderator && data?.isModerator && data.game.phase !== 'lobby' && data.game.phase !== 'day' && data.game.phase !== 'finished' && <div className="mt-4 flex flex-wrap gap-3">
       <button disabled={busy || (data.game.phase === 'night_zero' && data.game.round_number === 0)} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">← ย้อนกลับ Phase</button>
       <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
     </div>}
-    {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && <SpecialLocationPanel code={code} moderator={moderator && Boolean(data.isModerator)} />}
-    {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && <NeighborLetterPanel code={code} moderator={moderator && Boolean(data.isModerator)} selfId={data.selfId} eliminated={Boolean(data.players.find(p=>p.id===data.selfId)?.status==='eliminated')} />}
+    {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <SpecialLocationPanel code={code} moderator={moderator && Boolean(data.isModerator)} />}
+    {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <NeighborLetterPanel code={code} moderator={moderator && Boolean(data.isModerator)} selfId={data.selfId} eliminated={Boolean(data.players.find(p=>p.id===data.selfId)?.status==='eliminated')} />}
     {!exiled && data?.game.phase === 'night' && <NightLocationPanel code={code} moderator={moderator && Boolean(data?.isModerator)} />}
     {data?.game.phase === 'night_zero' && <NightZeroPanel code={code} moderator={moderator} phase={data.game.phase} />}
     {!exiled && data?.game.phase === 'day' && <DayVotePanel code={code} navigation={moderator && data?.isModerator ? (<div className="mt-4 flex flex-wrap gap-3">
