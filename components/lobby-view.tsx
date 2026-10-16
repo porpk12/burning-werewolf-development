@@ -9,7 +9,7 @@ import { SpecialLocationPanel } from '@/components/special-location-panel'
 import { NeighborLetterPanel } from '@/components/neighbor-letter-panel'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
-type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean }; burnedCount?: number; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
+type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
 
 export function LobbyView({ code, moderator = false }: { code: string; moderator?: boolean }) {
   const router = useRouter()
@@ -125,7 +125,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     {exiled && <section className="mt-5 rounded-xl border border-[#514258] bg-[#191522] p-6 text-center shadow-[0_0_40px_rgba(65,47,82,0.35)]"><div className="text-5xl">👻</div><h2 className="mt-3 text-2xl font-bold text-[#e2d4ef]">คุณถูกเนรเทศแล้ว</h2><p className="mt-2 text-sm text-[#b9abc9]">คุณอยู่ในหมู่บ้านข้าง ๆ และไม่สามารถโหวตหรือเลือกสถานที่ได้อีก แต่ยังสามารถส่งจดหมายในช่วงกลางคืนได้</p></section>}
     {!moderator && data?.game.phase === 'night' && <section className="mt-5 rounded-lg border border-[#d4a65a] bg-[#24170f] p-4" role="status">
       <h2 className="font-semibold text-[#f0c477]">📣 ผลการเนรเทศหลัง Day {data.game.round_number}</h2>
-      <p className="mt-2 text-sm text-[#e9d5bd]">{data.game.round_number === 1 || !data.players.some(p => p.status === 'eliminated') ? 'ไม่มีใครถูกเนรเทศ' : `ผู้เล่นที่ถูกเนรเทศแล้ว: ${data.players.filter(p => p.status === 'eliminated').map(p => p.display_name).join(', ')}`}</p>
+      <p className="mt-2 text-sm text-[#e9d5bd]">{!data.latestExileNames?.length ? 'ไม่มีใครถูกเนรเทศ' : `ผู้ถูกเนรเทศในวันนี้: ${data.latestExileNames.join(', ')}`}</p>
     </section>}
     {!moderator && data?.game.phase !== 'lobby' && data?.game.phase !== 'night_zero' && <section className="mt-5 rounded-lg border border-[#6e4e2f] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold text-[#d4a65a]">บทบาทของฉัน</h2><button type="button" onClick={() => setShowOwnRole(value => !value)} className="rounded-md border border-[#d4a65a] px-3 py-2 text-sm text-[#d4a65a]">{showOwnRole ? 'ซ่อนบทบาท' : 'ดูบทบาท'}</button></div>
