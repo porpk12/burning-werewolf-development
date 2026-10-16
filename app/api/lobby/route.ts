@@ -50,7 +50,9 @@ export async function GET(request: Request) {
       teammates = (players ?? []).filter(player => wolfIds.includes(player.id)).map(player => player.display_name)
     }
   }
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  const { count: burnedCount, error: burnedError } = await admin.from('night_burned_locations')
+    .select('location_id', { count: 'exact', head: true }).eq('game_id', game.id)
+  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open }, players: players ?? [], burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
