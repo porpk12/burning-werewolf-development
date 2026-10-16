@@ -15,6 +15,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmRestart, setConfirmRestart] = useState(false)
+  const [kickTarget, setKickTarget] = useState<Player | null>(null)
   const [showOwnRole, setShowOwnRole] = useState(false)
   const [visibleRoles, setVisibleRoles] = useState<Record<string, boolean>>({})
   const [wolfCount, setWolfCount] = useState(1)
@@ -60,6 +61,17 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
     finally { setBusy(false) }
   }
+  async function kickPlayer() {
+    if (!kickTarget) return
+    setBusy(true); setError('')
+    try {
+      const response = await fetch('/api/lobby', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'kick', code, playerId: kickTarget.id }) })
+      const result = await response.json()
+      if (!response.ok) setError(result.error ?? 'เตะผู้เล่นไม่สำเร็จ')
+      else { setKickTarget(null); await refresh() }
+    } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
+    finally { setBusy(false) }
+  }
   async function navigate(direction: 'back' | 'forward') {
     if (direction === 'back' && !window.confirm('ย้อนกลับไป Phase ก่อนหน้า?\nข้อมูลตั้งแต่ Phase ที่ย้อนกลับไปและหลังจากนั้นจะถูกลบถาวร')) return
     setBusy(true); setError('')
@@ -76,12 +88,12 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     <h1 className="mt-2 text-3xl font-semibold">{moderator ? 'จัดการห้องเกม' : 'ห้องรอเกม'}</h1>
     <p className="mt-5 text-sm text-[#b7aaa0]">รหัสห้อง</p><div className="mt-1 flex items-center gap-4"><strong className="text-3xl tracking-widest text-[#d4a65a]">{code}</strong><button className="rounded border border-[#6e4e2f] px-3 py-2 text-sm" onClick={() => void navigator.clipboard.writeText(code)}>คัดลอก</button></div>
     <div className="mt-6 flex items-center justify-between"><h2 className="text-lg font-semibold">ผู้เล่นในห้อง</h2><span>{data?.players.length ?? '…'} คน</span></div>
-    <ul className="mt-3 space-y-2">{data?.players.map(player => <li key={player.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#4b3226] px-3 py-2"><span>{player.seat_number}. {player.display_name} {player.id === data.selfId ? '(คุณ)' : ''}</span>{data.game.phase !== 'lobby' && <span className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-emerald-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ อยู่ในหมู่บ้าน'}</span>}</li>)}</ul>
+    <ul className="mt-3 space-y-2">{data?.players.map(player => <li key={player.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#4b3226] px-3 py-2"><span>{player.seat_number}. {player.display_name} {player.id === data.selfId ? '(คุณ)' : ''}</span>{data.game.phase !== 'lobby' && <span className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-emerald-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ ยังอยู่ในหมู่บ้าน'}</span>}{moderator && data.isModerator && <button type="button" disabled={busy} onClick={() => setKickTarget(player)} className="rounded border border-red-500/60 px-2 py-1 text-xs text-red-200 disabled:opacity-40">เตะออก</button>}</li>)}</ul>
     {moderator && data?.isModerator && data.game.phase !== 'lobby' && <section className="mt-5 rounded-lg border border-[#6e4e2f] p-4">
       <h2 className="font-semibold text-[#d4a65a]">สถานะผู้เล่นในเกม</h2>
       <p className="mt-1 text-xs text-[#b7aaa0]">เฉพาะ Moderator · ดูบทบาทได้ทุก Phase</p>
       <div className="mt-3 space-y-2">{data.players.map(player => <div key={player.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#4b3226] p-3">
-        <div><p className="font-medium">{player.display_name}</p><p className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-green-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ อยู่ในหมู่บ้าน'}</p></div>
+        <div><p className="font-medium">{player.display_name}</p><p className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-green-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ ยังอยู่ในหมู่บ้าน'}</p></div>
         <div className="flex items-center gap-3"><span className="text-sm text-[#d4a65a]">{visibleRoles[player.id] ? (data.moderatorRoles?.[player.id] === 'werewolf' ? 'หมาป่า' : data.moderatorRoles?.[player.id] === 'villager' ? 'ชาวบ้าน' : 'ยังไม่มีบทบาท') : '••••••'}</span><button type="button" onClick={() => setVisibleRoles(prev => ({ ...prev, [player.id]: !prev[player.id] }))} className="rounded border border-[#6e4e2f] px-3 py-2 text-sm">{visibleRoles[player.id] ? 'ซ่อนบทบาท' : 'ดูบทบาท'}</button></div>
       </div>)}</div>
     </section>}
@@ -89,6 +101,11 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold text-[#d4a65a]">บทบาทของฉัน</h2><button type="button" onClick={() => setShowOwnRole(value => !value)} className="rounded-md border border-[#d4a65a] px-3 py-2 text-sm text-[#d4a65a]">{showOwnRole ? 'ซ่อนบทบาท' : 'ดูบทบาท'}</button></div>
       {showOwnRole && <div className="mt-3 rounded-md bg-[#170f0d] p-3"><p className="font-semibold">{data?.ownRole === 'werewolf' ? '🐺 หมาป่า' : data?.ownRole === 'villager' ? 'ชาวบ้าน' : 'ยังไม่ได้รับบทบาท'}</p>{data?.ownRole === 'werewolf' && <p className="mt-2 text-sm text-[#b7aaa0]">เพื่อนร่วมทีมหมาป่า: {data.teammates?.length ? data.teammates.join(', ') : 'ไม่มี'}</p>}</div>}
       <p className="mt-2 text-xs text-[#b7aaa0]">แสดงบทบาทของคุณเท่านั้น และเปิดดูได้ตลอดเกม</p>
+    </section>}
+    {moderator && data?.isModerator && kickTarget && <section className="mt-4 rounded-lg border border-red-500/60 bg-red-950/30 p-4">
+      <p className="font-semibold text-red-200">ยืนยันเตะ {kickTarget.display_name} ออกจากห้อง?</p>
+      <p className="mt-2 text-sm text-red-100">ผู้เล่นคนนี้จะเข้าห้องด้วยเซสชันเดิมไม่ได้อีก และจะไม่ใช่ผู้ถูกเนรเทศ{data.game.phase !== 'lobby' ? ' · การเตะระหว่างเกมอาจกระทบคะแนนหรือความสมดุลของรอบปัจจุบัน' : ''}</p>
+      <div className="mt-3 flex gap-3"><button type="button" disabled={busy} onClick={() => void kickPlayer()} className="rounded bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">ยืนยันเตะออก</button><button type="button" disabled={busy} onClick={() => setKickTarget(null)} className="rounded border border-[#6e4e2f] px-4 py-2 text-sm">ยกเลิก</button></div>
     </section>}
     {!data?.players.length && <p className="mt-3 text-sm text-[#988c83]">ยังไม่มีผู้เล่น</p>}
     {data?.game.phase === 'lobby' ? <p className="mt-6 text-sm text-[#d4a65a]">กำลังรอผู้เล่นและ Moderator เริ่มเกม · รายชื่ออัปเดตทุก 3 วินาที</p> : <p className="mt-6 text-sm text-[#d4a65a]">เริ่มเกมแล้ว: {data?.game.phase} · ระบบการเล่นแต่ละเฟสยังอยู่ระหว่างพัฒนา</p>}
