@@ -91,7 +91,7 @@ export async function POST(request:Request){
  if(location!=='home'&&((burned??[]).some(x=>x.location_id===location)||!valid.some(x=>x.id===location))) return NextResponse.json({error:'สถานที่ไม่ถูกต้อง'},{status:400})
  let target:string|null=null
  if(location==='fortress'){
-  if(!valid.some(x=>x.id===body.target&&x.id!=='fortress')) return NextResponse.json({error:'กรุณาเลือกสถานที่ที่จะป้องกัน'},{status:400})
+  if(!valid.some(x=>x.id===body.target&&x.id!=='fortress')||(burned??[]).some(x=>x.location_id===body.target)) return NextResponse.json({error:'กรุณาเลือกสถานที่ที่จะป้องกัน'},{status:400})
   target=body.target
  }else if(location==='brothel'){
   if(typeof body.target!=='string'||body.target===selfId) return NextResponse.json({error:'กรุณาเลือกผู้เล่นคนอื่น'},{status:400})
