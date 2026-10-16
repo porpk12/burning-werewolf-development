@@ -67,6 +67,13 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
   // Day 1 is safe; on later days all tied top-distrust players with zero trust are exiled.
   const exiledNames = data?.round === 1 || maxDistrust === 0
     ? [] : topDistrusted.filter(p => p.trust === 0 && !p.shielded).map(p => p.name)
+  const exileExplanation = data?.round === 1
+    ? 'วันนี้เป็นวันแรกของเกม จึงไม่มีการเนรเทศ'
+    : maxDistrust === 0
+      ? 'ไม่มีใครได้รับคะแนนไม่เชื่อใจ'
+      : exiledNames.length ? '' : topDistrusted.map(p => p.trust > 0
+          ? `${p.name} โดนโหวตไม่เชื่อใจมากที่สุด แต่ยังมีคนเชื่อใจ`
+          : p.shielded ? `${p.name} ได้รับการคุ้มครองจากโบสถ์ จึงไม่ถูกเนรเทศ` : '').filter(Boolean).join(' · ')
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Day {data?.round ?? 1} — ลงคะแนนลับ</h2>
     {data?.isModerator ? <>
@@ -77,10 +84,10 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
       {data.marketBonuses?.length ? <p className="mt-3 text-sm text-[#d4a65a]">🛒 คะแนนตลาด (เฉพาะ Mod): {data.marketBonuses.map(b=>`${displayName(b.player_id)} → ${b.used?displayName(b.target_player_id):'ยังไม่ใช้'}`).join(' · ')}</p>:null}
       {data.votingClosed && <div className="mt-4 rounded border border-[#d4a65a] p-3" role="status">
         <h3 className="font-semibold text-[#d4a65a]">สรุปผลการลงคะแนน — Day {data.round}</h3>
-        <p className="mt-3">ไม่เชื่อใจมากที่สุด: <strong>{mostDistrusted || 'ไม่มีข้อมูล'} ({maxDistrust} คะแนน)</strong></p>
-        <p className="mt-2">เชื่อใจมากที่สุด: <strong>{mostTrusted || 'ไม่มีข้อมูล'} ({maxTrust} คะแนน)</strong></p>
-        <p className="mt-3 font-semibold">{exiledNames.length ? `☠ ถูกเนรเทศ: ${exiledNames.join(', ')}` : 'ไม่มีใครถูกเนรเทศ'}</p>
-        {data.round === 1 && <p className="mt-1 text-sm text-[#b7aaa0]">Day 1 ไม่มีการเนรเทศ ไม่ว่าผลคะแนนจะเป็นอย่างไร</p>}
+        <p className="mt-3">ไม่เชื่อใจมากที่สุด: <strong>{maxDistrust > 0 ? mostDistrusted : 'ไม่มี'} ({maxDistrust} คะแนน)</strong></p>
+        <p className="mt-2">เชื่อใจมากที่สุด: <strong>{maxTrust > 0 ? mostTrusted : 'ไม่มี'} ({maxTrust} คะแนน)</strong></p>
+        <p className="mt-3 font-bold text-[#f0c477]">{exiledNames.length ? `☠ ถูกเนรเทศ: ${exiledNames.join(', ')}` : 'ไม่มีใครถูกเนรเทศ'}</p>
+        {!exiledNames.length && <p className="mt-1 text-sm text-[#b7aaa0]">{exileExplanation}</p>}
         <button type="button" aria-expanded={showDetails} onClick={() => setShowDetails(value => !value)} className="mt-4 flex w-full items-center justify-between rounded border border-[#6e4e2f] px-3 py-3 text-left font-semibold">
           <span>รายละเอียดการลงคะแนน (เฉพาะ Moderator)</span><span aria-hidden="true">{showDetails ? '▲' : '▼'}</span>
         </button>
