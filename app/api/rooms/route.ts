@@ -31,8 +31,10 @@ export async function GET(request: Request) {
   const token = request.headers.get('cookie')?.split(';').map((item) => item.trim()).find((item) => item.startsWith(`bwf_player_${game.id}=`))?.split('=').slice(1).join('=')
   if (!token) return NextResponse.json({ error: 'ต้องเข้าร่วมห้องก่อน' }, { status: 401 })
   const { data: player } = await admin.from('game_players').select('id, game_id, display_name, seat_number, status').eq('game_id', game.id).eq('session_token_hash', sessionHash(token)).maybeSingle()
-  if (!player) return NextResponse.json({ error: 'เซสชันผู้เล่นไม่ถูกต้อง' }, { status: 401 })
-  await admin.from('game_players').update({ last_seen_at: new Date().toISOString(), status: 'connected' }).eq('id', player.id)
+  if (!player || player.status === 'removed') return NextResponse.json({ error: 'คุณถูกนำออกจากห้องนี้แล้ว' }, { status: 403 })
+  if (player.status === 'connected' || player.status === 'disconnected') {
+    await admin.from('game_players').update({ last_seen_at: new Date().toISOString(), status: 'connected' }).eq('id', player.id).neq('status', 'removed')
+  }
   return NextResponse.json({ game, player })
 }
 
