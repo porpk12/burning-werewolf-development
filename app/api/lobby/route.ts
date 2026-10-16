@@ -67,13 +67,13 @@ export async function POST(request: Request) {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(playerId)) {
       return NextResponse.json({ error: 'รหัสผู้เล่นไม่ถูกต้อง' }, { status: 400 })
     }
-    // Soft removal preserves previous game history, while excluding the player from the room.
-    const { data: kicked, error: kickError } = await admin.from('game_players')
-      .update({ status: 'removed' }).eq('game_id', game.id).eq('id', playerId)
-      .neq('status', 'removed').select('id').maybeSingle()
+    // One database transaction kicks and compacts lobby seats safely.
+    const { data: kicked, error: kickError } = await admin.rpc('kick_player_and_reseat', {
+      p_game_id: game.id, p_player_id: playerId,
+    })
     if (kickError) {
       console.error('Kick player failed:', kickError)
-      return NextResponse.json({ error: 'เตะผู้เล่นไม่สำเร็จ' }, { status: 500 })
+      return NextResponse.json({ error: 'เตะผู้เล่นไม่สำเร็จ กรุณารัน SQL migration สำหรับจัดลำดับที่นั่ง' }, { status: 500 })
     }
     if (!kicked) return NextResponse.json({ error: 'ไม่พบผู้เล่นที่ยังอยู่ในห้อง' }, { status: 404 })
     return NextResponse.json({ ok: true })
