@@ -54,7 +54,7 @@ export function NightZeroPanel({ code, moderator, phase }: { code: string; moder
         data && !data.isModerator ? <div className="mt-4 rounded-lg border border-[#6e4e2f] p-4">
           <p className="text-sm text-[#b7aaa0]">บทบาทของคุณ</p>
           <p className="mt-2 text-2xl font-bold text-[#d4a65a]">{data.role === 'werewolf' ? 'มนุษย์หมาป่า' : 'ชาวบ้าน'}</p>
-          {data.role === 'werewolf' && <p className="mt-3 text-sm">{data.teammates.length ? `เพื่อนหมาป่า: ${data.teammates.join(', ')}` : 'คุณเป็นหมาป่าเพียงตัวเดียวในห้อง'}</p>}
+          <p className="mt-3 text-sm text-[#d4a65a]">{data.role === 'werewolf' ? 'เงื่อนไขชัยชนะ: เผาสถานที่จนเหลือ 3 แห่ง ภายในจำนวนคืนที่กำหนด (8–10 คน: 6 คืน / 11–14 คน: 7 คืน โดยไม่นับ Night 0)' : 'เงื่อนไขชัยชนะ: เนรเทศหมาป่าทั้งหมด หรือป้องกันไม่ให้สถานที่เหลือเพียง 3 แห่งจนครบจำนวนคืนที่กำหนด (8–10 คน: 6 คืน / 11–14 คน: 7 คืน)'}</p>{data.role === 'werewolf' && <p className="mt-3 text-sm">{data.teammates.length ? `เพื่อนหมาป่า: ${data.teammates.join(', ')}` : 'คุณเป็นหมาป่าเพียงตัวเดียวในห้อง'}</p>}
           <button type="button" onClick={() => setRevealed(false)} className="mt-4 rounded border border-[#6e4e2f] px-4 py-2 text-sm">ซ่อนบทบาท</button>
         </div> : null}
     </>}
