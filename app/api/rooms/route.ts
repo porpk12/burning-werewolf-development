@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     if (!game || !game.lobby_open || game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้ไม่เปิดรับผู้เล่นแล้ว' }, { status: 404 })
     const { count } = await getAdminClient().from('game_players').select('id', { count: 'exact', head: true }).eq('game_id', game.id).neq('status', 'removed')
 
-    const { data: existing } = await getAdminClient().from('game_players').select('id').eq('game_id', game.id).eq('display_name', displayName).maybeSingle()
+    const { data: existing } = await getAdminClient().from('game_players').select('id').eq('game_id', game.id).eq('display_name', displayName).neq('status', 'removed').maybeSingle()
     if (existing) return NextResponse.json({ error: 'ชื่อนี้ถูกใช้ในห้องแล้ว' }, { status: 409 })
 
     const token = randomBytes(32).toString('base64url')
@@ -78,10 +78,29 @@ export async function POST(request: Request) {
     if (seatError) return NextResponse.json({ error: 'ไม่สามารถจัดลำดับผู้เล่นได้' }, { status: 500 })
     const seat = (lastSeat?.seat_number ?? 0) + 1
     const { data: player, error } = await getAdminClient().from('game_players').insert({ game_id: game.id, display_name: displayName, seat_number: seat, session_token_hash: sessionHash(token) }).select('id, game_id, display_name, seat_number, status').single()
-    if (error) return NextResponse.json({ error: 'เข้าร่วมห้องไม่สำเร็จ' }, { status: 400 })
+    if (error) return NextResponse.json({ error: error.code === '23505' ? 'ชื่อหรือหมายเลขผู้เล่นถูกใช้แล้ว กรุณาลองใหม่' : 'เข้าร่วมห้องไม่สำเร็จ' }, { status: error.code === '23505' ? 409 : 400 })
 
     const response = NextResponse.json({ player })
     response.cookies.set(`bwf_player_${game.id}`, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 })
+    return response
+  }
+
+  if (action === 'leave') {
+    const code = typeof body.roomCode === 'string' ? body.roomCode.trim().toUpperCase() : ''
+    if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
+    const admin = getAdminClient()
+    const { data: game } = await admin.from('games').select('id').eq('room_code', code).maybeSingle()
+    if (!game) return NextResponse.json({ error: 'ไม่พบห้อง' }, { status: 404 })
+    const cookieName = `bwf_player_${game.id}`
+    const token = request.headers.get('cookie')?.split(';').map(item => item.trim()).find(item => item.startsWith(`${cookieName}=`))?.split('=').slice(1).join('=')
+    if (!token) return NextResponse.json({ error: 'ไม่พบเซสชันของคุณ' }, { status: 401 })
+    const { data: player } = await admin.from('game_players').select('id').eq('game_id', game.id).eq('session_token_hash', sessionHash(token)).neq('status', 'removed').maybeSingle()
+    if (!player) return NextResponse.json({ error: 'คุณไม่ได้อยู่ในห้องนี้แล้ว' }, { status: 403 })
+    const { data: left, error } = await admin.rpc('kick_player_and_reseat', { p_game_id: game.id, p_player_id: player.id })
+    if (error) return NextResponse.json({ error: 'ออกจากห้องไม่สำเร็จ กรุณาตรวจสอบ SQL migration' }, { status: 500 })
+    if (!left) return NextResponse.json({ error: 'คุณไม่ได้อยู่ในห้องนี้แล้ว' }, { status: 409 })
+    const response = NextResponse.json({ ok: true })
+    response.cookies.set(cookieName, '', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 0 })
     return response
   }
 
