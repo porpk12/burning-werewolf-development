@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+ import { createHash } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getModerator } from '@/lib/supabase/auth'
@@ -42,13 +42,16 @@ export async function GET(request: Request) {
   if (voteError) return NextResponse.json({ error: 'โหลดคะแนนไม่สำเร็จ' }, { status: 500 })
   const { data: roles, error: rolesError } = await db.from('game_roles').select('player_id, role').eq('game_id', game.id)
   if (rolesError) return NextResponse.json({ error: 'โหลดสิทธิ์การโหวตไม่สำเร็จ' }, { status: 500 })
+  const {data:bonusRows}=await db.from('night_market_bonus').select('player_id,target_player_id,used').eq('game_id',game.id).eq('day_number',game.round_number)
+  const {data:shieldRows}=await db.from('night_church_shields').select('player_id').eq('game_id',game.id).eq('day_number',game.round_number)
+  const ownBonus=bonusRows?.find(b=>b.player_id===playerId)
   const ownRole = roles?.find(r => r.player_id === playerId)?.role
   const blockedTrustIds = ownRole === 'werewolf' ? roles?.filter(r => r.role === 'werewolf').map(r => r.player_id) ?? [] : []
   const own = rows?.find(x => x.voter_player_id === playerId)
-  const totals = isModerator ? (players ?? []).map(p => ({ id: p.id, name: p.display_name, trust: rows?.filter(v => v.trust_target_player_id === p.id).length ?? 0, distrust: rows?.filter(v => v.distrust_target_player_id === p.id).length ?? 0 })) : undefined
+  const totals = isModerator ? (players ?? []).map(p => ({ id: p.id, name: p.display_name, trust: rows?.filter(v => v.trust_target_player_id === p.id).length ?? 0, distrust: (rows?.filter(v => v.distrust_target_player_id === p.id).length ?? 0)+(bonusRows?.filter(b=>b.used&&b.target_player_id===p.id).length??0),shielded:shieldRows?.some(s=>s.player_id===p.id)??false })) : undefined
   const details = isModerator ? (rows ?? []).map(v => ({ voterId: v.voter_player_id, voterName: players?.find(p => p.id === v.voter_player_id)?.display_name ?? 'ไม่ทราบชื่อ', trust: v.trust_target_player_id, distrust: v.distrust_target_player_id })) : undefined
   const noTotals = isModerator ? { trust: rows?.filter(v => v.trust_target_player_id === null).length ?? 0, distrust: rows?.filter(v => v.distrust_target_player_id === null).length ?? 0 } : undefined
-  return NextResponse.json({ votingClosed: game.voting_closed, details, noTotals, isModerator, round: game.round_number, selfId: playerId, players: players ?? [], blockedTrustIds: isModerator ? [] : blockedTrustIds, ownVote: own ? { trust: own.trust_target_player_id, distrust: own.distrust_target_player_id } : null, submittedCount: rows?.length ?? 0, totals }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ votingClosed: game.voting_closed, marketBonus:ownBonus?{target:ownBonus.target_player_id,used:ownBonus.used}:null,marketBonuses:isModerator?bonusRows:undefined,details, noTotals, isModerator, round: game.round_number, selfId: playerId, players: players ?? [], blockedTrustIds: isModerator ? [] : blockedTrustIds, ownVote: own ? { trust: own.trust_target_player_id, distrust: own.distrust_target_player_id } : null, submittedCount: rows?.length ?? 0, totals }, { headers: { 'Cache-Control': 'no-store' } })
 }
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -58,6 +61,11 @@ export async function POST(request: Request) {
   const { db, game, isModerator, playerId } = ctx
   if (game.phase !== 'day') return NextResponse.json({ error: 'ไม่อยู่ในช่วงลงคะแนน' }, { status: 409 })
   if (game.voting_closed) return NextResponse.json({ error: 'ปิดโหวตแล้ว ไม่สามารถแก้ไขคะแนนได้' }, { status: 409 })
+  if(body?.action==='market'){
+    if(isModerator||!playerId||typeof body.target!=='string') return NextResponse.json({error:'ข้อมูลไม่ถูกต้อง'},{status:403})
+    const {error}=await db.rpc('submit_market_bonus',{p_game_id:game.id,p_player_id:playerId,p_target_id:body.target})
+    return error?NextResponse.json({error:error.message},{status:409}):NextResponse.json({ok:true})
+  }
   if (isModerator || !playerId) return NextResponse.json({ error: 'เฉพาะผู้เล่นเท่านั้นที่ลงคะแนนได้' }, { status: 403 })
   // null represents an explicit No vote; missing fields are invalid.
   const trust = body?.trust
