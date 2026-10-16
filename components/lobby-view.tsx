@@ -11,6 +11,18 @@ import { NeighborLetterPanel } from '@/components/neighbor-letter-panel'
 type Player = { id: string; display_name: string; seat_number: number; status: string }
 type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean; winner?: 'werewolf' | 'villager' | null; win_reason?: string | null }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
 
+function phaseDestination(phase: string, round: number, direction: 'back' | 'forward'): string {
+  if (direction === 'back') {
+    if (phase === 'day') return round === 1 ? 'Night 0' : `Night ${round - 1}`
+    if (phase === 'night') return `Day ${round}`
+    return 'Night 0'
+  }
+  if (phase === 'night_zero') return 'Day 1'
+  if (phase === 'day') return `Night ${round}`
+  if (phase === 'night') return `Day ${round + 1}`
+  return 'จบเกม'
+}
+
 export function LobbyView({ code, moderator = false }: { code: string; moderator?: boolean }) {
   const router = useRouter()
   const [data, setData] = useState<LobbyData | null>(null)
@@ -164,29 +176,27 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       {settingsChanged && <p className="mt-2 text-xs text-amber-300">กรุณาบันทึกจำนวนหมาป่าก่อนเริ่มเกม</p>}
     </section>}
     {moderator && data?.isModerator && data.game.phase === 'lobby' && <button disabled={busy || settingsChanged || data.players.length < 2} onClick={() => void start()} className="mt-5 rounded-md bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'กำลังเริ่ม…' : 'เริ่มเกมด้วยผู้เล่นที่อยู่ในห้อง (Night 0)'}</button>}
-    {moderator && data?.isModerator && data.game.phase !== 'lobby' && <div className="mt-5">
-      {!confirmRestart ? <button type="button" disabled={busy} onClick={() => setConfirmRestart(true)} className="rounded-md border border-red-500/60 px-5 py-3 font-semibold text-red-200 disabled:opacity-50">เริ่มเกมใหม่ในห้องเดิม</button> :
-        <div className="rounded-md border border-red-500/60 bg-red-950/30 p-4">
-          <p className="font-semibold text-red-200">ยืนยันเริ่มเกมใหม่ในห้องเดิม?</p>
-          <p className="mt-2 text-sm text-red-100">ข้อมูลเกมรอบนี้จะถูกลบถาวร แต่รหัสห้องและผู้เล่นเดิมจะยังอยู่</p>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <button type="button" disabled={busy} onClick={() => void restart()} className="rounded-md bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? 'กำลังรีเซ็ต…' : 'ยืนยันเริ่มเกมใหม่'}</button>
-            <button type="button" disabled={busy} onClick={() => setConfirmRestart(false)} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-50">ยกเลิก</button>
-          </div>
-        </div>}
-    </div>}
-    {moderator && data?.isModerator && data.game.phase !== 'lobby' && data.game.phase !== 'day' && data.game.phase !== 'finished' && <div className="mt-4 flex flex-wrap gap-3">
-      <button disabled={busy || (data.game.phase === 'night_zero' && data.game.round_number === 0)} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">← ย้อนกลับ Phase</button>
-      <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
-    </div>}
+    {moderator && data?.isModerator && data.game.phase !== 'lobby' && <section className="mt-5 rounded-lg border border-[#6e4e2f] bg-[#24170f] p-4" aria-label="แถบควบคุม Moderator">
+      <h2 className="mb-3 font-semibold text-[#d4a65a]">ควบคุมเกม</h2>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" disabled={busy || data.game.phase === 'night_zero' || data.game.phase === 'finished'} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40">← {phaseDestination(data.game.phase, data.game.round_number, 'back')}</button>
+        <button type="button" disabled={busy || data.game.phase === 'finished' || (data.game.phase === 'day' && !data.game.voting_closed)} onClick={() => void navigate('forward')} className="rounded-md border border-[#d4a65a] px-4 py-2 font-semibold text-[#d4a65a] disabled:cursor-not-allowed disabled:opacity-40">{phaseDestination(data.game.phase, data.game.round_number, 'forward')} →</button>
+        <button type="button" disabled={busy} onClick={() => setConfirmRestart(value => !value)} className="rounded-md border border-red-500/60 px-4 py-2 font-semibold text-red-200 disabled:opacity-50">เริ่มเกมใหม่ในห้องเดิม</button>
+      </div>
+      {confirmRestart && <div className="mt-4 rounded-md border border-red-500/60 bg-red-950/30 p-4">
+        <p className="font-semibold text-red-200">ยืนยันเริ่มเกมใหม่ในห้องเดิม?</p>
+        <p className="mt-2 text-sm text-red-100">ข้อมูลเกมรอบนี้จะถูกลบถาวร แต่รหัสห้องและผู้เล่นเดิมจะยังอยู่</p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button type="button" disabled={busy} onClick={() => void restart()} className="rounded-md bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? 'กำลังรีเซ็ต…' : 'ยืนยันเริ่มเกมใหม่'}</button>
+          <button type="button" disabled={busy} onClick={() => setConfirmRestart(false)} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-50">ยกเลิก</button>
+        </div>
+      </div>}
+    </section>}
     {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <SpecialLocationPanel code={code} moderator={moderator && Boolean(data.isModerator)} />}
     {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <NeighborLetterPanel code={code} moderator={moderator && Boolean(data.isModerator)} selfId={data.selfId} eliminated={Boolean(data.players.find(p=>p.id===data.selfId)?.status==='eliminated')} />}
     {!exiled && data?.game.phase === 'night' && <NightLocationPanel code={code} moderator={moderator && Boolean(data?.isModerator)} />}
     {data?.game.phase === 'night_zero' && <NightZeroPanel code={code} moderator={moderator} phase={data.game.phase} />}
-    {!exiled && data?.game.phase === 'day' && <DayVotePanel code={code} navigation={moderator && data?.isModerator ? (<div className="mt-4 flex flex-wrap gap-3">
-      <button disabled={busy || (data.game.phase === 'night_zero' && data.game.round_number === 0)} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">← ย้อนกลับ Phase</button>
-      <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
-    </div>) : null} />}
+    {!exiled && data?.game.phase === 'day' && <DayVotePanel code={code} navigation={null} />}
     {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
     {!moderator && confirmLeave && <section className="mt-4 rounded-lg border border-red-500/60 bg-red-950/30 p-4"><p className="font-semibold text-red-200">ยืนยันออกจากห้อง?</p><p className="mt-2 text-sm text-red-100">ชื่อของคุณจะว่างให้คนอื่นใช้ได้ และจะกลับเข้ามาด้วยเซสชันเดิมไม่ได้ หากเกมเริ่มแล้วจะเข้าร่วมใหม่ไม่ได้จนกว่า Lobby จะเปิดอีกครั้ง</p><div className="mt-3 flex gap-3"><button disabled={busy} onClick={() => void leaveRoom()} className="rounded bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-40">{busy ? 'กำลังออก…' : 'ยืนยันออกจากห้อง'}</button><button disabled={busy} onClick={() => setConfirmLeave(false)} className="rounded border border-[#6e4e2f] px-4 py-2 text-sm">ยกเลิก</button></div></section>}
     <div className="mt-6 flex flex-wrap gap-4"><button className="text-sm underline" onClick={() => void refresh()}>รีเฟรชรายชื่อ</button><button className="text-sm underline" onClick={() => router.push(moderator ? '/mod' : '/')}>กลับหน้าหลัก (ยังอยู่ในห้อง)</button>{!moderator && data?.selfId && <button disabled={busy} className="text-sm text-red-300 underline disabled:opacity-40" onClick={() => setConfirmLeave(true)}>ออกจากห้อง</button>}</div>
