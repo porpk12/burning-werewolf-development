@@ -15,6 +15,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmRestart, setConfirmRestart] = useState(false)
+  const [confirmLeave, setConfirmLeave] = useState(false)
   const [kickTarget, setKickTarget] = useState<Player | null>(null)
   const [showOwnRole, setShowOwnRole] = useState(false)
   const [visibleRoles, setVisibleRoles] = useState<Record<string, boolean>>({})
@@ -26,10 +27,11 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       const result = await response.json()
       if (!response.ok) { setError(result.error ?? 'โหลดข้อมูลไม่สำเร็จ'); return }
       setData(result)
+      if (!moderator && result.selfId) window.localStorage.setItem('bwf_last_room', code)
       if (!settingsChanged) setWolfCount(result.game.werewolf_count)
       setError('')
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
-  }, [code, settingsChanged])
+  }, [code, settingsChanged, moderator])
   useEffect(() => { void refresh(); const interval = setInterval(() => void refresh(), 3000); return () => clearInterval(interval) }, [refresh])
   async function saveSettings() {
     setBusy(true); setError('')
@@ -71,6 +73,18 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       else { setKickTarget(null); await refresh() }
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
     finally { setBusy(false) }
+  }
+  async function leaveRoom() {
+    if (busy) return
+    setBusy(true); setError('')
+    try {
+      const response = await fetch('/api/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'leave', roomCode: code }) })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) { setError(result?.error ?? 'ออกจากห้องไม่สำเร็จ'); return }
+      window.localStorage.removeItem('bwf_last_room')
+      router.push('/')
+    } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
+    finally { setBusy(false); setConfirmLeave(false) }
   }
   async function navigate(direction: 'back' | 'forward') {
     if (direction === 'back' && !window.confirm('ย้อนกลับไป Phase ก่อนหน้า?\nข้อมูลตั้งแต่ Phase ที่ย้อนกลับไปและหลังจากนั้นจะถูกลบถาวร')) return
@@ -143,6 +157,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
     </div>) : null} />}
     {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
-    <div className="mt-6 flex gap-4"><button className="text-sm underline" onClick={() => void refresh()}>รีเฟรชรายชื่อ</button><button className="text-sm underline" onClick={() => router.push(moderator ? '/mod' : '/')}>กลับหน้าหลัก</button></div>
+    {!moderator && confirmLeave && <section className="mt-4 rounded-lg border border-red-500/60 bg-red-950/30 p-4"><p className="font-semibold text-red-200">ยืนยันออกจากห้อง?</p><p className="mt-2 text-sm text-red-100">ชื่อของคุณจะว่างให้คนอื่นใช้ได้ และจะกลับเข้ามาด้วยเซสชันเดิมไม่ได้ หากเกมเริ่มแล้วจะเข้าร่วมใหม่ไม่ได้จนกว่า Lobby จะเปิดอีกครั้ง</p><div className="mt-3 flex gap-3"><button disabled={busy} onClick={() => void leaveRoom()} className="rounded bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-40">{busy ? 'กำลังออก…' : 'ยืนยันออกจากห้อง'}</button><button disabled={busy} onClick={() => setConfirmLeave(false)} className="rounded border border-[#6e4e2f] px-4 py-2 text-sm">ยกเลิก</button></div></section>}
+    <div className="mt-6 flex flex-wrap gap-4"><button className="text-sm underline" onClick={() => void refresh()}>รีเฟรชรายชื่อ</button><button className="text-sm underline" onClick={() => router.push(moderator ? '/mod' : '/')}>กลับหน้าหลัก (ยังอยู่ในห้อง)</button>{!moderator && data?.selfId && <button disabled={busy} className="text-sm text-red-300 underline disabled:opacity-40" onClick={() => setConfirmLeave(true)}>ออกจากห้อง</button>}</div>
   </div></main>
 }
