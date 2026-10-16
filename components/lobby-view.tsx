@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { NightZeroPanel } from '@/components/night-zero-panel'
 import { DayVotePanel } from '@/components/day-vote-panel'
 import { NightLocationPanel } from '@/components/night-location-panel'
+import { SpecialLocationPanel } from '@/components/special-location-panel'
+import { NeighborLetterPanel } from '@/components/neighbor-letter-panel'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
 type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean }; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
@@ -164,6 +166,8 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <button disabled={busy || (data.game.phase === 'night_zero' && data.game.round_number === 0)} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">← ย้อนกลับ Phase</button>
       <button disabled={busy || (data.game.phase === 'day' && !data.game.voting_closed) || data.game.phase === 'finished'} onClick={() => void navigate('forward')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:opacity-40">ไปข้างหน้า Phase →</button>
     </div>}
+    {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && <SpecialLocationPanel code={code} moderator={moderator && Boolean(data.isModerator)} />}
+    {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && <NeighborLetterPanel code={code} moderator={moderator && Boolean(data.isModerator)} selfId={data.selfId} eliminated={Boolean(data.players.find(p=>p.id===data.selfId)?.status==='eliminated')} />}
     {data?.game.phase === 'night' && <NightLocationPanel code={code} moderator={moderator && Boolean(data?.isModerator)} />}
     {data?.game.phase === 'night_zero' && <NightZeroPanel code={code} moderator={moderator} phase={data.game.phase} />}
     {data?.game.phase === 'day' && <DayVotePanel code={code} navigation={moderator && data?.isModerator ? (<div className="mt-4 flex flex-wrap gap-3">
