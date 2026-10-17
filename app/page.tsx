@@ -110,7 +110,7 @@ export default function Page() {
           <div className="sidebar-divider" />
           <div className="sidebar-label">ระบบเกม</div>
           <a className="side-link" href="#portal"><Gamepad2 /> จำลองเกม</a>
-          <a className="side-link" href="#history"><BarChart3 /> ประวัติเกม</a>
+          <a className="side-link" href="/history"><BarChart3 /> ประวัติเกม</a>
           <a className="side-link" href="#settings"><Settings2 /> ตั้งค่า</a>
           <div className="sidebar-bottom"><div className="avatar">ม</div><div><p className="text-xs font-semibold text-[#f2e4c9]">ผู้ดูแลเกม</p><p className="mt-0.5 text-[10px] text-[#83776f]">ผู้ดูแลระบบ</p></div><ChevronRight className="ml-auto size-4 text-[#665f5b]" /></div>
         </aside>
