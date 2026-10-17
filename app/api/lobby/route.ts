@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const code = new URL(request.url).searchParams.get('code')?.trim().toUpperCase() ?? ''
   if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
-  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id, winner, win_reason').eq('room_code', code).maybeSingle()
+  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, room_name, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id, winner, win_reason').eq('room_code', code).maybeSingle()
   if (gameError || !game) return NextResponse.json({ error: 'ไม่พบห้อง' }, { status: 404 })
   const moderator = await getModerator()
   const isOwner = moderator?.id === game.moderator_id
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
   }
   const { count: burnedCount, error: burnedError } = await admin.from('night_burned_locations')
     .select('location_id', { count: 'exact', head: true }).eq('game_id', game.id)
-  return NextResponse.json({ game: { room_code: game.room_code, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason }, players: isOwner ? (players ?? []) : visiblePlayers, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason }, players: isOwner ? (players ?? []) : visiblePlayers, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
