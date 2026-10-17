@@ -112,7 +112,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     finally { setBusy(false) }
   }
   const exiled = !moderator && data?.players.some(p => p.id === data.selfId && p.status === 'eliminated')
-  return <main className={`min-h-screen px-5 py-10 text-[#f2e4c9] ${exiled ? 'bg-gradient-to-b from-[#080a12] via-[#171320] to-[#090910]' : 'bg-[#170f0d]'}`}><div className="mx-auto max-w-xl rounded-xl border border-[#4b3226] bg-[#211614] p-6">
+  return <main className={`min-h-screen px-5 py-10 text-[#f2e4c9] ${exiled ? 'bg-gradient-to-b from-[#080a12] via-[#171320] to-[#090910]' : 'bg-[#170f0d]'}`}><div className="mx-auto max-w-xl rounded-xl border border-[#4b3226] bg-[#211614] p-6">{moderator && <a href="/history" className="mb-4 inline-block text-sm text-amber-300 underline">จัดการประวัติเกม / ลบห้อง</a>}{moderator && <a href="/history" className="mb-4 inline-block text-sm text-amber-300 underline">จัดการประวัติเกม / ลบห้อง</a>}
     <p className="text-xs tracking-widest text-[#d4a65a]">BURNING WEREWOLF</p>
     <h1 className="mt-2 text-3xl font-semibold">{moderator ? 'จัดการห้องเกม' : 'ห้องรอเกม'}</h1>
     <p className="mt-5 text-sm text-[#b7aaa0]">รหัสห้อง</p><div className="mt-1 flex items-center gap-4"><strong className="text-3xl tracking-widest text-[#d4a65a]">{code}</strong><button className="rounded border border-[#6e4e2f] px-3 py-2 text-sm" onClick={() => void navigator.clipboard.writeText(code)}>คัดลอก</button></div>
