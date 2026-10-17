@@ -44,11 +44,15 @@ export async function DELETE(request: Request) {
   }
   const { data: room } = await admin.from('games').select('id,phase,room_code').eq('id', body.id).eq('moderator_id', moderator.id).maybeSingle()
   if (!room) return NextResponse.json({ error: 'ไม่พบห้องหรือไม่มีสิทธิ์ลบ' }, { status: 404 })
-  if (room.phase !== 'lobby' && room.phase !== 'finished')
-    return NextResponse.json({ error: 'ไม่สามารถลบห้องขณะเกมกำลังดำเนินอยู่ กรุณาจบเกมหรือ Restart ก่อน' }, { status: 409 })
-  // FK ON DELETE CASCADE removes players, rounds and all associated game data.
+  // Owner-only destructive action: caller must confirm the exact room code.
+  if (body.confirmCode !== room.room_code)
+    return NextResponse.json({ error: 'กรุณายืนยันด้วยรหัสห้องให้ตรงกัน' }, { status: 400 })
+  // Database ON DELETE CASCADE removes dependent records, including active rounds.
   const { data: deleted, error } = await admin.from('games').delete()
-    .eq('id', room.id).eq('moderator_id', moderator.id).in('phase', ['lobby','finished']).select('id').maybeSingle()
-  if (error || !deleted) return NextResponse.json({ error: 'ลบห้องไม่สำเร็จ กรุณาตรวจสอบ foreign keys' }, { status: 500 })
+    .eq('id', room.id).eq('moderator_id', moderator.id).select('id').maybeSingle()
+  if (error || !deleted) {
+    console.error('Failed to delete room', { roomId: room.id, code: error?.code, message: error?.message })
+    return NextResponse.json({ error: error?.code === '23503' ? 'ลบห้องไม่สำเร็จ: มีข้อมูลที่อ้างอิงห้องนี้อยู่และยังไม่ได้ตั้งค่า ON DELETE CASCADE' : 'ลบห้องไม่สำเร็จ กรุณาตรวจสอบ Server Logs', code: error?.code }, { status: 500 })
+  }
   return NextResponse.json({ ok: true })
 }
