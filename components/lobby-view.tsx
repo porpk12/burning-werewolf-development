@@ -125,7 +125,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <p className="text-sm tracking-widest text-amber-300">THE GAME IS OVER</p>
       <h2 className="mt-3 text-3xl font-bold text-amber-100">{data.game.winner === 'werewolf' ? '🐺 หมาป่าชนะ!' : data.game.winner === 'villager' ? '🏘️ ชาวบ้านชนะ!' : 'เกมจบแล้ว'}</h2>
       <p className="mt-3 text-sm text-amber-200">{{special_location_burned:'สถานที่พิเศษถูกเผาทำลาย',three_locations_remaining:'เหลือสถานที่ปลอดภัยไม่เกิน 3 แห่ง',all_wolves_exiled:'หมาป่าทั้งหมดถูกเนรเทศ',survived_final_night:'หมู่บ้านอยู่รอดจนจบคืนสุดท้าย'}[data.game.win_reason ?? ''] ?? 'สิ้นสุดการแข่งขัน'}</p>
-      <p className="mt-3 text-xs text-[#b7aaa0]">ปิดกิจกรรมทั้งหมดแล้ว · Moderator สามารถเริ่มเกมใหม่ในห้องเดิมได้</p>
+      <p className="mt-3 text-xs text-[#b7aaa0]">ปิดกิจกรรมทั้งหมดแล้ว · Moderator สามารถเริ่มเกมใหม่ได้</p>
     </section>}
     {data && data.game.phase !== 'lobby' && <section className="mt-3 rounded-lg border border-orange-800/60 bg-[#291713] px-4 py-3 text-sm text-orange-200" role="status">🔥 สถานที่ถูกเผาแล้ว <strong>{data.burnedCount ?? 0}</strong> แห่ง จาก <strong>{data.players.length >= 11 ? 6 : 5}</strong> แห่ง</section>}
     {data?.game.phase === 'lobby' && <>
@@ -181,10 +181,10 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" disabled={busy || data.game.phase === 'night_zero' || data.game.phase === 'finished'} onClick={() => void navigate('back')} className="rounded-md border border-[#6e4e2f] px-4 py-2 disabled:cursor-not-allowed disabled:opacity-40">← {phaseDestination(data.game.phase, data.game.round_number, 'back')}</button>
         <button type="button" disabled={busy || data.game.phase === 'finished' || (data.game.phase === 'day' && !data.game.voting_closed)} onClick={() => void navigate('forward')} className="rounded-md border border-[#d4a65a] px-4 py-2 font-semibold text-[#d4a65a] disabled:cursor-not-allowed disabled:opacity-40">{phaseDestination(data.game.phase, data.game.round_number, 'forward')} →</button>
-        <button type="button" disabled={busy} onClick={() => setConfirmRestart(value => !value)} className="rounded-md border border-red-500/60 px-4 py-2 font-semibold text-red-200 disabled:opacity-50">เริ่มเกมใหม่ในห้องเดิม</button>
+        <button type="button" disabled={busy} onClick={() => setConfirmRestart(value => !value)} className="rounded-md border border-red-500/60 px-4 py-2 font-semibold text-red-200 disabled:opacity-50">เริ่มเกมใหม่</button>
       </div>
       {confirmRestart && <div className="mt-4 rounded-md border border-red-500/60 bg-red-950/30 p-4">
-        <p className="font-semibold text-red-200">ยืนยันเริ่มเกมใหม่ในห้องเดิม?</p>
+        <p className="font-semibold text-red-200">ยืนยันเริ่มเกมใหม่?</p>
         <p className="mt-2 text-sm text-red-100">ข้อมูลเกมรอบนี้จะถูกลบถาวร แต่รหัสห้องและผู้เล่นเดิมจะยังอยู่</p>
         <div className="mt-3 flex flex-wrap gap-3">
           <button type="button" disabled={busy} onClick={() => void restart()} className="rounded-md bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-50">{busy ? 'กำลังรีเซ็ต…' : 'ยืนยันเริ่มเกมใหม่'}</button>
