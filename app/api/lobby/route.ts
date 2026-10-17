@@ -104,6 +104,12 @@ export async function POST(request: Request) {
   }
   if (body.action === 'restart') {
     if (game.phase === 'lobby') return NextResponse.json({ error: 'ห้องอยู่ใน Lobby อยู่แล้ว' }, { status: 409 })
+    // Preserve the previous round before the reset clears game data.
+    const { error: archiveError } = await admin.rpc('archive_game_round', { p_game_id: game.id })
+    if (archiveError) {
+      console.error('Archive before restart failed:', archiveError)
+      return NextResponse.json({ error: 'บันทึกประวัติเกมไม่สำเร็จ กรุณารัน SQL migration ก่อน Restart' }, { status: 500 })
+    }
     // Atomic reset in PostgreSQL. Only the authenticated room moderator can reach this branch.
     const { error: resetError } = await admin.rpc('restart_game_in_same_room', { p_game_id: game.id })
     if (resetError) {
