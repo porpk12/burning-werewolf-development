@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code')?.trim().toUpperCase() ?? ''
   if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
   const admin = getAdminClient()
-  const { data: game } = await admin.from('games').select('id, room_code, phase, round_number, lobby_open, player_limit').eq('room_code', code).maybeSingle()
+  const { data: game } = await admin.from('games').select('id, room_code, room_name, phase, round_number, lobby_open, player_limit').eq('room_code', code).maybeSingle()
   if (!game) return NextResponse.json({ error: 'ไม่พบห้องนี้' }, { status: 404 })
   const token = request.headers.get('cookie')?.split(';').map((item) => item.trim()).find((item) => item.startsWith(`bwf_player_${game.id}=`))?.split('=').slice(1).join('=')
   if (!token) return NextResponse.json({ error: 'ต้องเข้าร่วมห้องก่อน' }, { status: 401 })
@@ -45,6 +45,8 @@ export async function POST(request: Request) {
   if (action === 'create') {
     const moderator = await getModerator()
     if (!moderator) return NextResponse.json({ error: 'ต้องเข้าสู่ระบบในฐานะผู้ดูแลก่อนสร้างห้อง' }, { status: 401 })
+    const roomName = typeof body.roomName === 'string' ? body.roomName.trim() : ''
+    if (!roomName || roomName.length > 80) return NextResponse.json({ error: 'กรุณาตั้งชื่อห้อง 1–80 ตัวอักษร' }, { status: 400 })
     const supabase = await createClient()
 
     const rulesetId = typeof body.rulesetId === 'string' ? body.rulesetId : 'burning-night'
@@ -53,8 +55,8 @@ export async function POST(request: Request) {
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const { data, error } = await supabase.from('games').insert({
-        room_code: roomCode(), moderator_id: moderator.id, ruleset_id: rulesetId, ruleset_version: rulesetVersion, player_limit: null, werewolf_count: werewolfCount,
-      }).select('id, room_code, phase, player_limit, werewolf_count, lobby_open').single()
+        room_code: roomCode(), room_name: roomName, moderator_id: moderator.id, ruleset_id: rulesetId, ruleset_version: rulesetVersion, player_limit: null, werewolf_count: werewolfCount,
+      }).select('id, room_code, room_name, phase, player_limit, werewolf_count, lobby_open').single()
       if (!error) return NextResponse.json({ game: data }, { status: 201 })
       if (error.code !== '23505') return NextResponse.json({ error: 'สร้างห้องไม่สำเร็จ' }, { status: 400 })
     }
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : ''
     if (!/^[A-Z0-9]{6}$/.test(code) || displayName.length < 1 || displayName.length > 32) return NextResponse.json({ error: 'ข้อมูลเข้าร่วมห้องไม่ถูกต้อง' }, { status: 400 })
 
-    const { data: game } = await getAdminClient().from('games').select('id, player_limit, lobby_open, phase').eq('room_code', code).maybeSingle()
+    const { data: game } = await getAdminClient().from('games').select('id, room_name, player_limit, lobby_open, phase').eq('room_code', code).maybeSingle()
     if (!game || !game.lobby_open || game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้ไม่เปิดรับผู้เล่นแล้ว' }, { status: 404 })
     const { count } = await getAdminClient().from('game_players').select('id', { count: 'exact', head: true }).eq('game_id', game.id).neq('status', 'removed')
 
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
     const { data: player, error } = await getAdminClient().from('game_players').insert({ game_id: game.id, display_name: displayName, seat_number: seat, session_token_hash: sessionHash(token) }).select('id, game_id, display_name, seat_number, status').single()
     if (error) return NextResponse.json({ error: error.code === '23505' ? 'ชื่อหรือหมายเลขผู้เล่นถูกใช้แล้ว กรุณาลองใหม่' : 'เข้าร่วมห้องไม่สำเร็จ' }, { status: error.code === '23505' ? 409 : 400 })
 
-    const response = NextResponse.json({ player })
+    const response = NextResponse.json({ player, roomName: game.room_name })
     response.cookies.set(`bwf_player_${game.id}`, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 })
     return response
   }
