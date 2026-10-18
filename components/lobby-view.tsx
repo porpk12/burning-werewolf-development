@@ -7,6 +7,7 @@ import { DayVotePanel } from '@/components/day-vote-panel'
 import { NightLocationPanel } from '@/components/night-location-panel'
 import { SpecialLocationPanel } from '@/components/special-location-panel'
 import { NeighborLetterPanel } from '@/components/neighbor-letter-panel'
+import { SelfGuidedTutorial } from '@/components/self-guided-tutorial'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
 type LobbyData = { game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean; winner?: 'werewolf' | 'villager' | null; win_reason?: string | null }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
@@ -128,6 +129,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <p className="mt-3 text-xs text-[#b7aaa0]">ปิดกิจกรรมทั้งหมดแล้ว · Moderator สามารถเริ่มเกมใหม่ได้</p>
     </section>}
     {data && data.game.phase !== 'lobby' && <section className="mt-3 rounded-lg border border-orange-800/60 bg-[#291713] px-4 py-3 text-sm text-orange-200" role="status">🔥 สถานที่ถูกเผาแล้ว <strong>{data.burnedCount ?? 0}</strong> แห่ง จาก <strong>{data.players.length >= 11 ? 6 : 5}</strong> แห่ง</section>}
+    {!moderator && data?.game.phase === 'lobby' && data.selfId && <SelfGuidedTutorial roomCode={code} playerId={data.selfId} />}
     {data?.game.phase === 'lobby' && <>
     <div className="mt-6 flex items-center justify-between"><h2 className="text-lg font-semibold">ผู้เล่นในห้อง</h2><span>{data?.players.length ?? '…'} คน</span></div>
     <ul className="mt-3 space-y-2">{data?.players.map(player => <li key={player.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#4b3226] px-3 py-2"><span>{player.seat_number}. {player.display_name} {player.id === data.selfId ? '(คุณ)' : ''}</span>{data.game.phase !== 'lobby' && <span className={player.status === 'eliminated' ? 'text-sm text-red-300' : 'text-sm text-emerald-300'}>{player.status === 'eliminated' ? '☠ ถูกเนรเทศ' : '♥ ยังอยู่ในหมู่บ้าน'}</span>}{moderator && data.isModerator && <button type="button" disabled={busy} onClick={() => setKickTarget(player)} className="rounded border border-red-500/60 px-2 py-1 text-xs text-red-200 disabled:opacity-40">เตะออก</button>}</li>)}</ul>
