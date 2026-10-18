@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const { data, error } = await supabase.from('games').insert({
-        room_code: roomCode(), room_name: roomName, moderator_id: moderator.id, ruleset_id: rulesetId, ruleset_version: rulesetVersion, player_limit: null, werewolf_count: werewolfCount, objectives_enabled: body.objectivesEnabled !== false,
+        room_code: roomCode(), room_name: roomName, moderator_id: moderator.id, ruleset_id: rulesetId, ruleset_version: rulesetVersion, player_limit: null, werewolf_count: werewolfCount, objectives_enabled: true,
       }).select('id, room_code, room_name, phase, player_limit, werewolf_count, lobby_open').single()
       if (!error) return NextResponse.json({ game: data }, { status: 201 })
       if (error.code !== '23505') {
