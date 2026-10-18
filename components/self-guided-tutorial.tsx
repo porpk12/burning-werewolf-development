@@ -41,6 +41,12 @@ export function SelfGuidedTutorial({ roomCode, playerId, progress }: Props) {
       setAction(0); setTrust(''); setDistrust(''); setPlace(''); setLetter('')
     }
   }
+  async function previous() {
+    if (saving || step <= 0) return
+    if (await save({ step: step - 1, started: true, completed: false })) {
+      setAction(0); setTrust(''); setDistrust(''); setPlace(''); setLetter('')
+    }
+  }
   async function restart() { if (await save({ step: 0, started: true, completed: false })) { setAction(0); setOpen(true) } }
   const button = 'rounded-md border border-amber-500/70 px-3 py-2 text-sm disabled:opacity-40'
   return <section className="mt-5 rounded-xl border border-amber-600/60 bg-[#2b1c14] p-4" aria-label="เรียนรู้วิธีเล่น">
@@ -62,6 +68,7 @@ export function SelfGuidedTutorial({ roomCode, playerId, progress }: Props) {
         {step === 5 && <><p>ถ้าถูกเนรเทศ คุณยังส่งจดหมายได้คืนละหนึ่งฉบับ Moderator ต้องอนุมัติก่อนส่ง ผู้รับที่อยู่บ้านจะไม่เห็นชื่อผู้ส่ง ลองเขียนจดหมายสั้น ๆ</p><textarea className="mt-3 w-full rounded border border-amber-700 bg-[#281b16] p-2" rows={3} value={letter} onChange={e => { setLetter(e.target.value); setAction(0) }} placeholder="คืนนี้ฉันอยากเตือนให้ทุกคนระวัง..."/><button disabled={!letter.trim()} className={`${button} mt-2`} onClick={() => setAction(1)}>ส่งจดหมายจำลอง</button>{action > 0 && <p className="mt-3 text-emerald-300">✉️ ส่งให้ Moderator ตรวจแล้ว! ถ้าไม่มีคนอยู่บ้าน จดหมายที่อนุมัติจะรอส่งในคืนถัดไป</p>}</>}
         {step === 6 && <><p className="text-emerald-300">🎉 คุณพร้อมเข้าสู่เกมจริงแล้ว! รอ Moderator เริ่ม Night 0 ได้เลย</p><button className={`${button} mt-3`} onClick={() => void restart()}>เรียนใหม่ตั้งแต่ต้น</button></>}
       </div>
+      {step > 0 && <button type="button" disabled={saving} className="mt-4 mr-2 rounded border border-amber-500/70 px-4 py-2 font-semibold text-amber-100 disabled:opacity-40" onClick={() => void previous()}>← บทก่อนหน้า</button>}
       {step < 6 && <button type="button" disabled={!action || saving} className="mt-4 rounded bg-amber-500 px-4 py-2 font-semibold text-[#25140c] disabled:opacity-40" onClick={() => void next()}>{step === 5 ? 'จบบทเรียน ✓' : 'เข้าใจแล้ว · บทถัดไป →'}</button>}
       <p className="mt-3 text-xs text-[#bba393]">ทุกกิจกรรมเป็นสถานการณ์จำลอง ไม่กระทบเกมจริง · เมื่อ Moderator เริ่ม Night 0 ทุกคนจะเข้าสู่หน้าเกมอัตโนมัติ</p>
     </>}
