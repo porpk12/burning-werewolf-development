@@ -105,11 +105,12 @@ export async function POST(request: Request) {
   if (body.action === 'settings') {
     if (game.phase !== 'lobby') return NextResponse.json({ error: 'ตั้งค่าเกมได้เฉพาะตอนอยู่ Lobby' }, { status: 409 })
     const count = body.werewolfCount
+    if (typeof body.objectivesEnabled !== 'boolean') return NextResponse.json({ error: 'สถานะ Secret Objectives ไม่ถูกต้อง' }, { status: 400 })
     if (!Number.isSafeInteger(count) || count < 1 || count > 1000) return NextResponse.json({ error: 'จำนวนหมาป่าต้องเป็นจำนวนเต็มตั้งแต่ 1 ถึง 1000' }, { status: 400 })
     const { data: updated, error: updateError } = await admin.from('games')
-      .update({ werewolf_count: count }).eq('id', game.id).eq('phase', 'lobby').select('id').maybeSingle()
+      .update({ werewolf_count: count, objectives_enabled: body.objectivesEnabled }).eq('id', game.id).eq('phase', 'lobby').select('id').maybeSingle()
     if (updateError || !updated) return NextResponse.json({ error: 'บันทึกการตั้งค่าไม่สำเร็จ กรุณาลองอีกครั้ง' }, { status: 409 })
-    return NextResponse.json({ ok: true, werewolfCount: count })
+    return NextResponse.json({ ok: true, werewolfCount: count, objectivesEnabled: body.objectivesEnabled })
   }
   if (body.action === 'restart') {
     if (game.phase === 'lobby') return NextResponse.json({ error: 'ห้องอยู่ใน Lobby อยู่แล้ว' }, { status: 409 })
@@ -124,6 +125,12 @@ export async function POST(request: Request) {
     if (resetError) {
       console.error('Restart game failed:', resetError)
       return NextResponse.json({ error: 'รีเซ็ตเกมไม่สำเร็จ กรุณาตรวจสอบว่าได้รัน SQL migration แล้ว' }, { status: 500 })
+    }
+    // A restarted room always defaults to enabled; moderator can change it in the Lobby.
+    const { error: objectivesResetError } = await admin.from('games').update({ objectives_enabled: true }).eq('id', game.id).eq('phase', 'lobby')
+    if (objectivesResetError) {
+      console.error('Reset Secret Objectives default failed:', objectivesResetError)
+      return NextResponse.json({ error: 'กลับสู่ Lobby แล้ว แต่รีเซ็ตค่า Secret Objectives ไม่สำเร็จ' }, { status: 500 })
     }
     return NextResponse.json({ ok: true, phase: 'lobby' })
   }
