@@ -74,7 +74,18 @@ export async function GET(request: Request) {
     ? await admin.rpc('bw_objective_status', { p_game_id: game.id }) : { data: [], error: null }
   if (objectiveError) return NextResponse.json({ error: 'โหลดเป้าหมายลับไม่สำเร็จ กรุณาตรวจสอบ SQL Migration' }, { status: 500 })
   const visibleObjectives = isOwner ? (objectives ?? []) : (objectives ?? []).filter((o: {player_id:string}) => o.player_id === selfId)
-  return NextResponse.json({ objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  let submissionStatus: { submitted: string[]; pending: string[]; phase: string } | undefined
+  if (isOwner && (game.phase === 'day' || game.phase === 'night')) {
+    const table = game.phase === 'day' ? 'votes' : 'night_location_choices'
+    const column = game.phase === 'day' ? 'voter_player_id' : 'player_id'
+    const { data: submissions, error: submissionsError } = await admin.from(table)
+      .select(column).eq('game_id', game.id).eq('round_number', game.round_number)
+    if (submissionsError) return NextResponse.json({ error: 'โหลดสถานะการส่งไม่สำเร็จ' }, { status: 500 })
+    const ids = new Set((submissions ?? []).map(row => String((row as Record<string, unknown>)[column])))
+    const active = (players ?? []).filter(player => player.status === 'connected')
+    submissionStatus = { phase: game.phase, submitted: active.filter(player => ids.has(player.id)).map(player => player.display_name), pending: active.filter(player => !ids.has(player.id)).map(player => player.display_name) }
+  }
+  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -132,6 +143,7 @@ export async function POST(request: Request) {
       console.error('Reset Secret Objectives default failed:', objectivesResetError)
       return NextResponse.json({ error: 'กลับสู่ Lobby แล้ว แต่รีเซ็ตค่า Secret Objectives ไม่สำเร็จ' }, { status: 500 })
     }
+    await admin.from('bw_discussion_timers').delete().eq('game_id', game.id)
     return NextResponse.json({ ok: true, phase: 'lobby' })
   }
   if (game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้เริ่มเกมแล้ว' }, { status: 409 })
