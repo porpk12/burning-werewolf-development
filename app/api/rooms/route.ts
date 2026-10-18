@@ -58,7 +58,17 @@ export async function POST(request: Request) {
         room_code: roomCode(), room_name: roomName, moderator_id: moderator.id, ruleset_id: rulesetId, ruleset_version: rulesetVersion, player_limit: null, werewolf_count: werewolfCount,
       }).select('id, room_code, room_name, phase, player_limit, werewolf_count, lobby_open').single()
       if (!error) return NextResponse.json({ game: data }, { status: 201 })
-      if (error.code !== '23505') return NextResponse.json({ error: 'สร้างห้องไม่สำเร็จ' }, { status: 400 })
+      if (error.code !== '23505') {
+        console.error('Room creation failed:', { code: error.code, message: error.message, details: error.details, hint: error.hint })
+        const message = error.code === '42703' || error.code === 'PGRST204'
+          ? 'ฐานข้อมูลยังไม่มีคอลัมน์ชื่อห้อง กรุณารัน SQL Migration สำหรับชื่อห้อง'
+          : error.code === '23502' || error.code === '23514'
+            ? 'ฐานข้อมูลยังมีข้อกำหนดจำนวนผู้เล่นแบบเก่า กรุณารัน SQL Migration ปรับโครงสร้างห้อง'
+            : error.code === '42501'
+              ? 'ไม่มีสิทธิ์สร้างห้อง กรุณาตรวจสอบสิทธิ์ Moderator และ RLS'
+              : `สร้างห้องไม่สำเร็จ (รหัส ${error.code || 'unknown'}) กรุณาตรวจสอบ Server Logs`
+        return NextResponse.json({ error: message }, { status: 400 })
+      }
     }
     return NextResponse.json({ error: 'ไม่สามารถสร้างรหัสห้องที่ไม่ซ้ำได้' }, { status: 503 })
   }
