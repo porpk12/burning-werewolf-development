@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const step = body?.step
   const completed = body?.completed
   const started = body?.started
-  if (!/^[A-Z0-9]{6}$/.test(code) || !Number.isInteger(step) || step < 0 || step > 6 || typeof started !== 'boolean' || typeof completed !== 'boolean') return NextResponse.json({ error: 'ข้อมูลบทเรียนไม่ถูกต้อง' }, { status: 400 })
+  if (!/^[A-Z0-9]{6}$/.test(code) || !Number.isInteger(step) || step < 0 || step > 7 || typeof started !== 'boolean' || typeof completed !== 'boolean') return NextResponse.json({ error: 'ข้อมูลบทเรียนไม่ถูกต้อง' }, { status: 400 })
   const admin = db()
   const { data: game } = await admin.from('games').select('id, phase').eq('room_code', code).maybeSingle()
   if (!game) return NextResponse.json({ error: 'ไม่พบห้อง' }, { status: 404 })
