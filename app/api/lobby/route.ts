@@ -29,6 +29,11 @@ export async function GET(request: Request) {
   }
   const { data: players, error } = await admin.from('game_players').select('id, display_name, seat_number, status').eq('game_id', game.id).neq('status', 'removed').order('seat_number')
   if (error) return NextResponse.json({ error: 'โหลดรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
+  // Tutorial progress is public within this room, but contains no secret game information.
+  const { data: tutorialRows, error: tutorialError } = await admin.from('bw_tutorial_progress')
+    .select('player_id, step, started, completed').eq('game_id', game.id)
+  if (tutorialError) return NextResponse.json({ error: 'โหลดสถานะ Tutorial ไม่สำเร็จ กรุณารัน SQL Migration Tutorial v2' }, { status: 500 })
+  const tutorialProgress = Object.fromEntries((tutorialRows ?? []).map(row => [row.player_id, { step: row.step, started: row.started, completed: row.completed }]))
   // An exile is resolved at vote close, but only announced on entering the next Night.
   // Mask only *today's* new exiles while in Day; earlier exiles remain visible.
   const { data: exileEvents, error: exileError } = await admin.from('bw_exile_events')
@@ -65,7 +70,7 @@ export async function GET(request: Request) {
   }
   const { count: burnedCount, error: burnedError } = await admin.from('night_burned_locations')
     .select('location_id', { count: 'exact', head: true }).eq('game_id', game.id)
-  return NextResponse.json({ game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason }, players: isOwner ? (players ?? []) : visiblePlayers, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
