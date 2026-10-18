@@ -19,5 +19,7 @@ export async function POST(request: Request) {
     console.error('Navigate phase failed', error)
     return NextResponse.json({ error: error.message.includes('Voting must be closed') ? 'ต้องปิดโหวตก่อนเปลี่ยนไปกลางคืน' : 'เปลี่ยน Phase ไม่สำเร็จ กรุณาตรวจสอบ SQL และสถานะเกม' }, { status: 409 })
   }
+  // A discussion belongs to the previous phase and must not leak into the next one.
+  await admin.from('bw_discussion_timers').delete().eq('game_id', game.id)
   return NextResponse.json({ ok: true, result: data })
 }
