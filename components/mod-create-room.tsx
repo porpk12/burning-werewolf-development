@@ -9,17 +9,22 @@ export function ModCreateRoom() {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [werewolfCount, setWerewolfCount] = useState(1)
+  const [roomName, setRoomName] = useState('')
   const [error, setError] = useState('')
   const [game, setGame] = useState<CreatedGame | null>(null)
 
   async function createRoom() {
+    if (!roomName.trim() || roomName.trim().length > 80) {
+      setError('กรุณาตั้งชื่อห้อง 1–80 ตัวอักษร')
+      return
+    }
     setBusy(true)
     setError('')
     try {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'create', werewolfCount }),
+        body: JSON.stringify({ action: 'create', werewolfCount, roomName: roomName.trim() }),
       })
       const result = await response.json().catch(() => null)
       if (!response.ok || !result?.game?.room_code) {
@@ -48,7 +53,9 @@ export function ModCreateRoom() {
   return (
     <section className="mt-8 rounded-xl border border-[#4b3226] bg-[#211614] p-6">
       <h2 className="font-display text-xl">สร้างห้องเกม</h2>
-      <p className="mt-2 text-sm text-[#b7aaa0]">ห้องรองรับผู้เล่นสูงสุด 12 คน และเริ่มได้โดยไม่ต้องรอให้ครบ</p>
+      <label htmlFor="room-name" className="mt-4 block text-sm text-[#f2e4c9]">ชื่อห้อง</label>
+      <input id="room-name" type="text" value={roomName} onChange={(event) => setRoomName(event.target.value)} maxLength={80} placeholder="เช่น เทสระบบ / รอบวันเสาร์" disabled={busy} className="mt-2 block w-full max-w-md rounded-md border border-[#6e4e2f] bg-[#170f0d] px-3 py-2 text-[#f2e4c9]" />
+      <p className="mt-2 text-xs text-[#b7aaa0]">ชื่อห้องจะแสดงให้ผู้เล่นเห็นและใช้ในประวัติเกม</p>
       <label htmlFor="werewolf-count" className="mt-4 block text-sm text-[#f2e4c9]">จำนวนหมาป่า</label>
       <select id="werewolf-count" value={werewolfCount} onChange={(event) => setWerewolfCount(Number(event.target.value))} disabled={busy} className="mt-2 block w-full max-w-xs rounded-md border border-[#6e4e2f] bg-[#170f0d] px-3 py-2 text-[#f2e4c9]">
         {[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count} คน</option>)}
