@@ -10,7 +10,6 @@ export function ModCreateRoom() {
   const [busy, setBusy] = useState(false)
   const [werewolfCount, setWerewolfCount] = useState(1)
   const [roomName, setRoomName] = useState('')
-  const [objectivesEnabled, setObjectivesEnabled] = useState(true)
   const [error, setError] = useState('')
   const [game, setGame] = useState<CreatedGame | null>(null)
 
@@ -25,7 +24,7 @@ export function ModCreateRoom() {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'create', werewolfCount, roomName: roomName.trim(), objectivesEnabled }),
+        body: JSON.stringify({ action: 'create', werewolfCount, roomName: roomName.trim() }),
       })
       const result = await response.json().catch(() => null)
       if (!response.ok || !result?.game?.room_code) {
@@ -62,7 +61,6 @@ export function ModCreateRoom() {
         {[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count} คน</option>)}
       </select>
       <p className="mt-2 text-xs text-[#b7aaa0]">เมื่อเริ่มเกม จำนวนผู้เล่นจริงต้องมากกว่าจำนวนหมาป่า</p>
-      <label className="mt-4 flex items-center gap-3 text-sm"><input type="checkbox" checked={objectivesEnabled} onChange={e => setObjectivesEnabled(e.target.checked)} disabled={busy} /> เปิดเป้าหมายลับส่วนบุคคล (ชัยชนะสมบูรณ์)</label>
       <button type="button" onClick={createRoom} disabled={busy} className="mt-4 rounded-md bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">
         {busy ? 'กำลังสร้างห้อง…' : 'สร้างห้องเกมใหม่'}
       </button>
