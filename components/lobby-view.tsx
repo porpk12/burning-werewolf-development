@@ -38,6 +38,8 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmRestart, setConfirmRestart] = useState(false)
+  const [announcePopupOpen, setAnnouncePopupOpen] = useState(false)
+  const [dismissedAnnouncementKey, setDismissedAnnouncementKey] = useState<string | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   const [kickTarget, setKickTarget] = useState<Player | null>(null)
   const [showOwnRole, setShowOwnRole] = useState(false)
@@ -64,6 +66,23 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
   }, [code, settingsChanged, moderator])
   useEffect(() => { void refresh(); const interval = setInterval(() => void refresh(), 3000); return () => clearInterval(interval) }, [refresh])
+  const announcementKey = data ? `${data.game.started_at ?? code}:${data.game.round_number}` : ''
+  useEffect(() => {
+    if (moderator && data?.game.phase === 'finished' && data.game.winner && !data.game.results_announced && dismissedAnnouncementKey !== announcementKey) setAnnouncePopupOpen(true)
+    if (data?.game.results_announced || data?.game.phase !== 'finished') setAnnouncePopupOpen(false)
+  }, [moderator, data?.game.phase, data?.game.winner, data?.game.results_announced, announcementKey, dismissedAnnouncementKey])
+  const closeAnnouncementPopup = () => { setDismissedAnnouncementKey(announcementKey); setAnnouncePopupOpen(false) }
+  async function announceResults() {
+    setBusy(true); setError('')
+    try {
+      const response = await fetch('/api/announce-results', {method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({code})})
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error ?? 'ประกาศผลไม่สำเร็จ')
+      setAnnouncePopupOpen(false)
+      await refresh()
+    } catch (e) { setError(e instanceof Error ? e.message : 'ประกาศผลไม่สำเร็จ') }
+    finally { setBusy(false) }
+  }
   async function saveSettings() {
     setBusy(true); setError('')
     try {
@@ -257,7 +276,20 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <SpecialLocationPanel code={code} moderator={moderator && Boolean(data.isModerator)} />}
     {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <NeighborLetterPanel code={code} moderator={moderator && Boolean(data.isModerator)} selfId={data.selfId} eliminated={Boolean(data.players.find(p=>p.id===data.selfId)?.status==='eliminated')} />}
     {!moderator && data?.selfId && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && <SecretLetterPopup code={code} playerId={data.selfId} round={data.game.round_number} phase={data.game.phase} />}
-    {moderator && data?.game.phase==='finished'&&<section className="mt-5 rounded-xl border border-amber-600 bg-[#231a13] p-5 text-center"><h2 className="text-xl font-semibold text-amber-200">ผลการแข่งขันพร้อมประกาศ</h2><p className="mt-3">{data.game.winner==='villager'?'ฝ่ายชาวบ้านเป็นผู้ชนะ':data.game.winner==='werewolf'?'ฝ่ายหมาป่าเป็นผู้ชนะ':'รอผลการแข่งขัน'}</p>{data.game.results_announced?<p className="mt-3 text-emerald-300">ประกาศผลให้ผู้เล่นแล้ว</p>:<button type="button" disabled={busy||!data.game.winner} onClick={async()=>{if(!window.confirm('ยืนยันประกาศผลการแข่งขันให้ผู้เล่นทุกคน?'))return;setBusy(true);try{const response=await fetch('/api/announce-results',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code})});const result=await response.json();if(!response.ok)throw new Error(result.error??'ประกาศผลไม่สำเร็จ');await refresh()}catch(e){setError(e instanceof Error?e.message:'ประกาศผลไม่สำเร็จ')}finally{setBusy(false)}}} className="mt-4 rounded-lg bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-40">ประกาศผลให้ผู้เล่น</button>}</section>}
+    {moderator && data?.game.phase === 'finished' && !data.game.results_announced && <button type="button" onClick={() => setAnnouncePopupOpen(true)} className="mt-5 w-full rounded-xl border border-amber-600/60 bg-[#231a13] p-4 text-center font-semibold text-amber-200">เปิดหน้าต่างประกาศผลให้ผู้เล่น</button>}
+    {moderator && data?.game.phase === 'finished' && data.game.results_announced && <p className="mt-5 text-center text-emerald-300">ประกาศผลให้ผู้เล่นแล้ว</p>}
+    {moderator && data?.game.phase === 'finished' && !data.game.results_announced && announcePopupOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4" role="presentation" onMouseDown={(e) => { if(e.target===e.currentTarget)closeAnnouncementPopup() }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="announce-results-title" className="relative w-full max-w-md rounded-2xl border border-amber-600/60 bg-[#211a16] p-6 text-center text-[#e8d7b9] shadow-2xl">
+        <button type="button" aria-label="ปิดหน้าต่าง" onClick={closeAnnouncementPopup} className="absolute right-3 top-3 rounded-md p-2 text-amber-100/70 hover:text-white">✕</button>
+        <p className="text-sm tracking-[0.2em] text-amber-400">THE FINAL VERDICT</p>
+        <h2 id="announce-results-title" className="mt-3 text-2xl font-bold text-amber-200">ถึงเวลาประกาศผล</h2>
+        <p className="mt-4 text-sm leading-7">เปลวเพลิงสงบลงแล้ว และชะตาของหมู่บ้านถูกตัดสิน<br/>เมื่อพร้อมแล้ว จงเปิดเผยผลการแข่งขันแก่ผู้เล่นทุกคน</p>
+        <p className="mt-4 text-lg font-semibold text-amber-200">{data.game.winner === 'villager' ? 'ฝ่ายชาวบ้านเป็นผู้ชนะ' : data.game.winner === 'werewolf' ? 'ฝ่ายหมาป่าเป็นผู้ชนะ' : 'กำลังรอผลการแข่งขัน'}</p>
+        {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
+        <button type="button" disabled={busy || !data.game.winner} onClick={() => void announceResults()} className="mt-6 w-full rounded-lg bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-40">{busy ? 'กำลังประกาศผล…' : 'ประกาศผลให้ผู้เล่น'}</button>
+        <button type="button" disabled={busy} onClick={closeAnnouncementPopup} className="mt-3 w-full rounded-lg border border-[#66503a] px-5 py-2 text-sm text-[#c6b49d] disabled:opacity-40">ยังไม่ประกาศ</button>
+      </section>
+    </div>}
     {moderator && data && data.game.phase !== 'lobby' && <VillageLocationStatus playerCount={data.players.length} burnedLocations={data.burnedLocations} burnedCount={data.burnedCount}/>}
     {moderator && data && data.game.phase !== 'lobby' && data.game.phase !== 'finished' && <div className="bw-mod-key-action"><div className="bw-key-action-label"><h2>{data.game.phase === 'day' ? '☀️ ลงคะแนนประจำวัน' : data.game.phase === 'night' ? '🌙 สำรวจหมู่บ้านยามค่ำคืน' : '🌙 คืนแห่งการเปิดเผย'}</h2></div>
     {!exiled && data?.game.phase === 'night' && <NightLocationPanel code={code} moderator={moderator && Boolean(data?.isModerator)} />}
