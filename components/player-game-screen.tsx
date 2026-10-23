@@ -15,7 +15,7 @@ import { GameChronicle } from '@/components/game-chronicle'
 type Player = {id:string; display_name:string; seat_number:number; status:string}
 type Objective = {player_id:string; objective_key:string; title:string; description:string; current:number; target:number; completed:boolean}
 export type PlayerScreenData = {
-  game:{phase:string;round_number:number;objectives_enabled?:boolean;winner?:'villager'|'werewolf'|null;win_reason?:string|null};
+  game:{phase:string;round_number:number;objectives_enabled?:boolean;winner?:'villager'|'werewolf'|null;win_reason?:string|null;bw_timeline_revision?:number};
   players:Player[];selfId:string|null;ownRole?:'villager'|'werewolf'|null;teammates?:string[];objectives?:Objective[];
   burnedCount?:number;latestExileNames?:string[]
 }
@@ -57,7 +57,7 @@ export function PlayerGameScreen({code,data,storyOpen,onStoryClose,error}:{code:
       </section>
       <section className="bw-village-map"><div className="bw-section-label"><Flame size={17}/><h2>สถานที่ในหมู่บ้าน</h2><span>{data.burnedCount??0} แห่งถูกเผา</span></div><div className="bw-place-grid">{locations.slice(0,limit.locations).map(({name,icon:Icon})=><div key={name} className="bw-place-tile"><Icon size={21}/><span>{name}</span></div>)}</div><p className="bw-map-note">สถานะการเผารวม {data.burnedCount??0} แห่ง · รายละเอียดสถานที่ดูได้ในช่วงเลือกสถานที่</p></section>
       <section className="bw-villagers"><div className="bw-section-label"><Users size={17}/><h2>สถานะชาวบ้าน</h2><span>{data.players.filter(p=>p.status!=='eliminated').length} คนที่ยังอยู่</span></div><div className="bw-villager-grid">{data.players.map(p=><div key={p.id} className={`bw-villager-tile ${p.status==='eliminated'?'is-out':''}`}><span className="bw-villager-dot"/><span className="bw-villager-name">{p.display_name}{p.id===data.selfId?' (คุณ)':''}</span></div>)}</div></section>
-      {data.selfId&&phase!=='night_zero'&&<SecretLetterPopup code={code} playerId={data.selfId} round={data.game.round_number} phase={phase}/>}
+      {data.selfId&&phase!=='night_zero'&&<SecretLetterPopup code={code} playerId={data.selfId} round={data.game.round_number} phase={phase} revision={data.game.bw_timeline_revision??0}/>}
       {error&&<p role="alert" className="bw-error">{error}</p>}
     </div>
     {detail&&<div className="bw-player-modal" role="dialog" aria-modal="true" aria-label={detail==='role'?'บทบาทของฉัน':'ภารกิจลับ'}><div className="bw-player-parchment"><button className="bw-modal-close" onClick={()=>setDetail(null)} aria-label="ปิด"><X/></button>{detail==='role'?<><Shield size={32}/><span className="bw-player-overline">YOUR TRUE IDENTITY</span><h2>{data.ownRole==='werewolf'?'หมาป่า':'ชาวบ้าน'}</h2><p>{data.ownRole==='werewolf'?`เผาสถานที่ให้เหลือ ${limit.remaining} แห่ง หรือทำลายสถานที่พิเศษ`:`เนรเทศหมาป่าทั้งหมด หรือรักษาสถานที่ให้เหลือมากกว่า ${limit.remaining} แห่งจนจบเกม`}</p>{data.ownRole==='werewolf'&&<p>เพื่อนหมาป่า: {data.teammates?.join(', ')||'ไม่มี'}</p>}</>:<><ScrollText size={32}/><span className="bw-player-overline">SECRET OBJECTIVE</span><h2>{data.game.objectives_enabled?(objective?.title||'ยังไม่ได้รับภารกิจ'):'ปิดใช้งานภารกิจลับ'}</h2><p>{objective?.description||'ไม่มีภารกิจในเกมนี้'}</p>{objective&&<p>ความคืบหน้า {objective.current}/{objective.target} {objective.completed?'· สำเร็จแล้ว':''}</p>}</>}<button className="bw-parchment-dismiss" onClick={()=>setDetail(null)}>ปิดการ์ด</button></div></div>}
