@@ -11,7 +11,8 @@ export async function GET(request:Request){
  const {data:game}=await db.from('games').select('id,moderator_id,phase,round_number').eq('room_code',code).maybeSingle();if(!game)return NextResponse.json({error:'ไม่พบห้อง'},{status:404})
  const mod=await getModerator();const isMod=mod?.id===game.moderator_id
  if(!isMod){const token=request.headers.get('cookie')?.split(';').map(x=>x.trim()).find(x=>x.startsWith(`bwf_player_${game.id}=`))?.split('=').slice(1).join('=');if(!token)return NextResponse.json({error:'ไม่มีสิทธิ์'},{status:401});const hash=createHash('sha256').update(token).digest('hex');const {data:player}=await db.from('game_players').select('id').eq('game_id',game.id).eq('session_token_hash',hash).neq('status','removed').maybeSingle();if(!player)return NextResponse.json({error:'ไม่มีสิทธิ์'},{status:401})}
- if(game.round_number<5||game.phase==='lobby')return NextResponse.json({announced:false},{headers:{'Cache-Control':'no-store'}})
+ const {count:playerCount}=await db.from('game_players').select('id',{count:'exact',head:true}).eq('game_id',game.id).neq('status','removed')
+ if((playerCount??0)<=7||game.round_number<5||game.phase==='lobby')return NextResponse.json({announced:false},{headers:{'Cache-Control':'no-store'}})
  const {data:special}=await db.from('bw_special_locations').select('location_id').eq('game_id',game.id).maybeSingle()
  return NextResponse.json(isMod?{announced:!!special,location:special?.location_id??null}:{announced:!!special},{headers:{'Cache-Control':'no-store'}})
 }
