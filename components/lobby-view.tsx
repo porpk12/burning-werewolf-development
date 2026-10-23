@@ -90,7 +90,13 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       const response = await fetch('/api/lobby', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'restart', code }) })
       const result = await response.json()
       if (!response.ok) setError(result.error ?? 'เริ่มเกมใหม่ไม่สำเร็จ')
-      else { setConfirmRestart(false); await refresh() }
+      else {
+        setConfirmRestart(false)
+        // Force a fresh component tree after the database reset.
+        // This clears phase-local state and pending timers from the previous round.
+        window.location.reload()
+        return
+      }
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
     finally { setBusy(false) }
   }
