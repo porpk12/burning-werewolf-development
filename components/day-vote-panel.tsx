@@ -36,12 +36,12 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
     try{const r=await fetch('/api/day-vote',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code,action:'market',target})});const j=await r.json();if(!r.ok)throw new Error(j.error??'บันทึกไม่ได้');await refresh()}catch(e){setError(e instanceof Error?e.message:'บันทึกไม่ได้')}finally{setBusy(false)}
   }
   async function closeVote() {
-    if (!window.confirm('ยืนยันปิดโหวต? ผู้เล่นจะไม่สามารถแก้คะแนนได้อีก')) return
+    if (!window.confirm('ยืนยันปิดลงคะแนน? ผู้เล่นจะไม่สามารถแก้คะแนนได้อีก')) return
     setBusy(true); setError('')
     try {
       const r = await fetch('/api/day-vote', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) })
       const j = await r.json()
-      if (!r.ok) setError(j.error ?? 'ปิดโหวตไม่สำเร็จ')
+      if (!r.ok) setError(j.error ?? 'ปิดลงคะแนนไม่สำเร็จ')
       else await refresh()
     } catch { setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ') }
     finally { setBusy(false) }
@@ -72,14 +72,14 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
     : maxDistrust === 0
       ? 'ไม่มีใครได้รับคะแนนไม่เชื่อใจ'
       : exiledNames.length ? '' : topDistrusted.map(p => p.trust > 0
-          ? `${p.name} โดนโหวตไม่เชื่อใจมากที่สุด แต่ยังมีคนเชื่อใจ`
+          ? `${p.name} โดนลงคะแนนไม่เชื่อใจมากที่สุด แต่ยังมีคนเชื่อใจ`
           : p.shielded ? `${p.name} ได้รับการคุ้มครองจากโบสถ์ จึงไม่ถูกเนรเทศ` : '').filter(Boolean).join(' · ')
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Day {data?.round ?? 1} — ลงคะแนนลับ</h2>
     {data?.isModerator ? <>
       <p className="mt-3">ส่งคะแนนแล้ว {data.submittedCount} / {data.players.length} คน</p>
-      <p className="mt-2 text-sm text-[#b7aaa0]">สถานะ: {data.votingClosed ? 'ปิดโหวตแล้ว' : 'เปิดโหวตอยู่'} · เฉพาะ Moderator เห็นผล</p>
-      {!data.votingClosed && <button type="button" disabled={busy} onClick={() => void closeVote()} className="mt-3 rounded bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">{busy ? 'กำลังปิด…' : 'ปิดโหวต'}</button>}
+      <p className="mt-2 text-sm text-[#b7aaa0]">สถานะ: {data.votingClosed ? 'ปิดลงคะแนนแล้ว' : 'เปิดลงคะแนนอยู่'} · เฉพาะ Moderator เห็นผล</p>
+      {!data.votingClosed && <button type="button" disabled={busy} onClick={() => void closeVote()} className="mt-3 rounded bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">{busy ? 'กำลังปิด…' : 'ปิดลงคะแนน'}</button>}
       {navigation}
       {data.marketBonuses?.length ? <p className="mt-3 text-sm text-[#d4a65a]">🛒 คะแนนตลาด (เฉพาะ Mod): {data.marketBonuses.map(b=>`${displayName(b.player_id)} → ${b.used?displayName(b.target_player_id):'ยังไม่ใช้'}`).join(' · ')}</p>:null}
       {data.votingClosed && <div className="mt-4 rounded border border-[#d4a65a] p-3" role="status">
@@ -111,7 +111,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
           </div>}
         </div>}
       </div>}
-    </> : data?.votingClosed ? <p className="mt-4 text-[#d4a65a]">ปิดโหวตแล้ว · ผลคะแนนแสดงเฉพาะ Moderator</p> : <>
+    </> : data?.votingClosed ? <p className="mt-4 text-[#d4a65a]">ปิดลงคะแนนแล้ว · ผลคะแนนแสดงเฉพาะ Moderator</p> : <>
       <p className="mt-3 text-sm text-[#b7aaa0]">เชื่อใจและไม่เชื่อใจอย่างละ 1 ตัวเลือก หรือเลือกไม่มีได้ · ไม่เชื่อใจตัวเองได้</p>
       <label className="mt-4 block text-sm">ไม่เชื่อใจ</label><select value={distrust} onChange={e => setDistrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{distrustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <label className="mt-4 block text-sm">เชื่อใจ</label><select value={trust} onChange={e => setTrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{trustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
