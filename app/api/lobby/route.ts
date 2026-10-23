@@ -68,8 +68,8 @@ export async function GET(request: Request) {
       teammates = (players ?? []).filter(player => wolfIds.includes(player.id)).map(player => player.display_name)
     }
   }
-  const { data: burnedRows, error: burnedError } = await admin.from('night_burned_locations')
-    .select('location_id').eq('game_id', game.id)
+  const { count: burnedCount, error: burnedError } = await admin.from('night_burned_locations')
+    .select('location_id', { count: 'exact', head: true }).eq('game_id', game.id)
   const { data: objectives, error: objectiveError } = game.objectives_enabled && game.phase !== 'lobby'
     ? await admin.rpc('bw_objective_status', { p_game_id: game.id }) : { data: [], error: null }
   if (objectiveError) return NextResponse.json({ error: 'โหลดเป้าหมายลับไม่สำเร็จ กรุณาตรวจสอบ SQL Migration' }, { status: 500 })
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     const active = (players ?? []).filter(player => player.status === 'connected')
     submissionStatus = { phase: game.phase, submitted: active.filter(player => ids.has(player.id)).map(player => player.display_name), pending: active.filter(player => !ids.has(player.id)).map(player => player.display_name) }
   }
-  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedRows?.length ?? 0), burnedLocations: burnedError ? [] : (burnedRows ?? []).map(row => row.location_id), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
   if (game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้เริ่มเกมแล้ว' }, { status: 409 })
   const { data: players, error: playerError } = await admin.from('game_players').select('id').eq('game_id', game.id).neq('status', 'removed')
   if (playerError || !players) return NextResponse.json({ error: 'อ่านรายชื่อผู้เล่นไม่สำเร็จ' }, { status: 500 })
-  if (players.length < 2) return NextResponse.json({ error: 'ต้องมีผู้เล่นอย่างน้อย 2 คน เพื่อให้มีทั้งชาวบ้านและหมาป่า' }, { status: 409 })
+  if (players.length < 2 || players.length > 20) return NextResponse.json({ error: 'รองรับผู้เล่น 2–20 คน' }, { status: 409 })
   if (game.werewolf_count < 1 || game.werewolf_count >= players.length) return NextResponse.json({ error: `จำนวนผู้เล่นต้องมากกว่าจำนวนหมาป่า (${game.werewolf_count} คน)` }, { status: 400 })
   // Claim the start transition first so repeated requests cannot assign roles twice.
   const { data: claimed, error: claimError } = await admin.from('games').update({ phase: 'night_zero', lobby_open: false, started_at: new Date().toISOString() }).eq('id', game.id).eq('phase', 'lobby').select('id').maybeSingle()
