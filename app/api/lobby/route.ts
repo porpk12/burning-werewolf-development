@@ -42,7 +42,12 @@ export async function GET(request: Request) {
   const hiddenIds = new Set(game.phase === 'day' && !isOwner
     ? (exileEvents ?? []).filter(e => e.day_number === game.round_number).map(e => e.player_id)
     : [])
-  const visiblePlayers = (players ?? []).map(p => hiddenIds.has(p.id) ? { ...p, status: 'connected' } : p)
+  // Seat numbers sent to the UI are contiguous after removals. Keep the
+  // database seat_number untouched so existing historical references remain valid.
+  const visiblePlayers = (players ?? []).map((p, index) => ({
+    ...p, seat_number: index + 1,
+    status: hiddenIds.has(p.id) ? 'connected' : p.status,
+  }))
   const latestExiles = game.phase === 'night' && !isOwner
     ? (exileEvents ?? []).filter(e => e.day_number === game.round_number).map(e => e.player_id)
     : []
