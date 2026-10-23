@@ -139,6 +139,9 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     setStoryOpen(false); setShowOwnRole(true)
   }
   const exiled = !moderator && data?.players.some(p => p.id === data.selfId && p.status === 'eliminated')
+  // The current phase is unknown until the first response. Avoid flashing the Lobby on refresh.
+  if (!data && !error) return <main className="min-h-dvh bg-[#151b18] flex items-center justify-center px-4 text-[#d8c8aa]" role="status" aria-live="polite"><span className="text-sm">กำลังเข้าสู่หมู่บ้าน…</span></main>
+  if (!data && error) return <main className="min-h-dvh bg-[#151b18] flex flex-col items-center justify-center gap-4 px-4 text-[#e7d5be]"><p role="alert">{error}</p><button type="button" onClick={() => void refresh()} className="rounded-lg border border-[#a68b65] px-4 py-2">ลองอีกครั้ง</button></main>
   if (!moderator && data && data.game.phase !== 'lobby') return <PlayerGameScreen code={code} data={data} storyOpen={storyOpen} onStoryClose={acknowledgeStory} error={error} />
   return <main className={`bw-game ${moderator ? 'bw-moderator-scene' : ''} ${!moderator && data?.game.phase !== 'lobby' ? 'h-dvh overflow-hidden py-2 sm:py-4' : 'min-h-screen py-10'} px-3 sm:px-5 text-[#f2e4c9] ${exiled ? 'bg-gradient-to-b from-[#080a12] via-[#171320] to-[#090910]' : 'bg-[#170f0d]'}`}><div className={`bw-game-surface mx-auto ${moderator ? 'max-w-4xl' : 'max-w-xl'} p-4 sm:p-6 ${!moderator && data?.game.phase !== 'lobby' ? 'h-full overflow-y-auto overscroll-contain' : ''}`}>{!moderator && data?.game.phase === 'night_zero' && storyOpen && <div role="dialog" aria-modal="true" aria-labelledby="bw-story-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 px-4 py-6">
       <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-amber-700/70 bg-[#1c1411] p-6 text-center shadow-2xl">
