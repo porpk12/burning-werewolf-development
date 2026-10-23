@@ -11,6 +11,7 @@ import { SelfGuidedTutorial } from '@/components/self-guided-tutorial'
 import { gameLimits } from '@/lib/night-locations'
 import { DiscussionTimer } from '@/components/discussion-timer'
 import { GameChronicle } from '@/components/game-chronicle'
+import { SecretLetterPopup } from '@/components/secret-letter-popup'
 
 type Player = { id: string; display_name: string; seat_number: number; status: string }
 type TutorialProgress = { step: number; started: boolean; completed: boolean }
@@ -244,6 +245,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     </section>}
     {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <SpecialLocationPanel code={code} moderator={moderator && Boolean(data.isModerator)} />}
     {data && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && data.game.phase !== 'finished' && <NeighborLetterPanel code={code} moderator={moderator && Boolean(data.isModerator)} selfId={data.selfId} eliminated={Boolean(data.players.find(p=>p.id===data.selfId)?.status==='eliminated')} />}
+    {!moderator && data?.selfId && data.game.phase !== 'lobby' && data.game.phase !== 'night_zero' && <SecretLetterPopup code={code} playerId={data.selfId} round={data.game.round_number} phase={data.game.phase} />}
     {!exiled && data?.game.phase === 'night' && <NightLocationPanel code={code} moderator={moderator && Boolean(data?.isModerator)} />}
     {data?.game.phase === 'night_zero' && <NightZeroPanel code={code} moderator={moderator} phase={data.game.phase} />}
     {!exiled && data?.game.phase === 'day' && <DayVotePanel code={code} navigation={null} />}
