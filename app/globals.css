@@ -1171,3 +1171,30 @@ button, input, textarea, select { font: inherit; }
 .bw-moderator-scene .bw-village-map{margin:18px 0}
 .bw-player-clock{margin-top:14px}
 @media(min-width:700px){.bw-place-grid{grid-template-columns:repeat(auto-fit,minmax(115px,1fr))}}
+
+/* Player information panels are read-only, not interactive controls. */
+.bw-player-scene .bw-night-path,
+.bw-player-scene .bw-village-map,
+.bw-player-scene .bw-player-clock,
+.bw-player-scene .bw-villagers {
+  cursor: default;
+  box-shadow: none;
+  outline: none;
+}
+.bw-player-scene .bw-night-path,
+.bw-player-scene .bw-village-map,
+.bw-player-scene .bw-villagers {
+  border: 0;
+  background: #252d28;
+  border-radius: 14px;
+  padding: 12px;
+}
+.bw-player-scene .bw-village-map .bw-place-tile,
+.bw-player-scene .bw-villagers .bw-villager-tile {
+  box-shadow: none;
+  cursor: default;
+}
+.bw-player-scene .bw-player-clock > section,
+.bw-player-scene .bw-player-clock > div {
+  box-shadow: none;
+}
