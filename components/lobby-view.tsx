@@ -168,7 +168,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       <section className="mt-3 rounded-xl border border-amber-600/70 bg-[#24170f] p-3"><h2 className="font-semibold text-amber-200">⚡ KEY ACTION · {data.game.phase==='day'?'กลางวัน':data.game.phase==='night'?'กลางคืน':'คืนที่ 0'}</h2>
         {data.game.phase==='day'&&!exiled&&<DayVotePanel code={code} navigation={null}/>}
         {data.game.phase==='night'&&!exiled&&<NightLocationPanel code={code} moderator={false}/>}
-        {['day','night'].includes(data.game.phase)&&<SpecialLocationPanel code={code} moderator={false}/>} }
+        {['day','night'].includes(data.game.phase)&&<SpecialLocationPanel code={code} moderator={false}/>}
         {data.game.phase==='night_zero'&&<NightZeroPanel code={code} moderator={false} phase={data.game.phase}/>}
         {exiled&&<p className="mt-3 text-sm text-[#c6b3a5]">คุณถูกเนรเทศแล้ว ไม่สามารถลงคะแนนหรือเลือกสถานที่ได้</p>}
         {data.game.phase==='night'&&exiled&&<NeighborLetterPanel code={code} moderator={false} selfId={data.selfId} eliminated={true}/>}
