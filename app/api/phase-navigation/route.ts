@@ -21,5 +21,10 @@ export async function POST(request: Request) {
   }
   // A discussion belongs to the previous phase and must not leak into the next one.
   await admin.from('bw_discussion_timers').delete().eq('game_id', game.id)
+  if (body.direction === 'back') {
+    const { data: revisionRow } = await admin.from('games').select('bw_timeline_revision').eq('id', game.id).single()
+    const { error: revisionError } = await admin.from('games').update({ bw_timeline_revision: (revisionRow?.bw_timeline_revision ?? 0) + 1 }).eq('id', game.id)
+    if (revisionError) return NextResponse.json({ error: 'ย้อน Phase แล้ว แต่รีเซ็ตประวัติข้อความไม่สำเร็จ' }, { status: 500 })
+  }
   return NextResponse.json({ ok: true, result: data })
 }
