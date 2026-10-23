@@ -34,7 +34,7 @@ export async function POST(request:Request){
   if(!timer)return NextResponse.json({error:'ยังไม่มีนาฬิกา'},{status:409})
   if(body.action==='pause')next={remaining_seconds:remaining,ends_at:null}
   else if(body.action==='resume')next={remaining_seconds:remaining,ends_at:remaining?new Date(now+remaining*1000).toISOString():null}
-  else if(body.action==='extend')next={remaining_seconds:Math.min(3600,remaining+60),ends_at:timer.ends_at?new Date(now+(remaining+60)*1000).toISOString():null}
+  else if(body.action==='extend')next={remaining_seconds:Math.min(3600,remaining+10),ends_at:timer.ends_at?new Date(now+(remaining+10)*1000).toISOString():null}
   else next={remaining_seconds:0,ends_at:null}
  }
  // Non-start actions must UPDATE the existing row. UPSERT with a partial payload
