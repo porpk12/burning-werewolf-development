@@ -11,18 +11,15 @@ import { NeighborLetterPanel } from '@/components/neighbor-letter-panel'
 import { SecretLetterPopup } from '@/components/secret-letter-popup'
 import { DiscussionTimer } from '@/components/discussion-timer'
 import { GameChronicle } from '@/components/game-chronicle'
+import { VillageLocationStatus } from '@/components/village-location-status'
 
 type Player = {id:string; display_name:string; seat_number:number; status:string}
 type Objective = {player_id:string; objective_key:string; title:string; description:string; current:number; target:number; completed:boolean}
 export type PlayerScreenData = {
   game:{phase:string;round_number:number;objectives_enabled?:boolean;winner?:'villager'|'werewolf'|null;win_reason?:string|null;bw_timeline_revision?:number};
   players:Player[];selfId:string|null;ownRole?:'villager'|'werewolf'|null;teammates?:string[];objectives?:Objective[];
-  burnedCount?:number;latestExileNames?:string[]
+  burnedCount?:number;burnedLocations?:string[];latestExileNames?:string[]
 }
-const locations = [
-  {name:'ห้องสมุด',icon:BookOpen}, {name:'ป้อมปราการ',icon:Castle}, {name:'ซ่อง',icon:Wine},
-  {name:'โรงเตี๊ยม',icon:Wine}, {name:'โบสถ์',icon:Church}, {name:'ตลาด',icon:Store},
-]
 export function PlayerGameScreen({code,data,storyOpen,onStoryClose,error}:{code:string;data:PlayerScreenData;storyOpen:boolean;onStoryClose:()=>void;error:string}) {
   const [detail,setDetail] = useState<'role'|'objective'|null>(null)
   const [detailExpanded,setDetailExpanded] = useState(false)
@@ -49,7 +46,7 @@ export function PlayerGameScreen({code,data,storyOpen,onStoryClose,error}:{code:
       </header>
       <section className="bw-night-path" aria-label="คืนที่เหลืออยู่"><div className="bw-night-path-title"><span>เส้นทางแห่งรัตติกาล</span><span>คืนที่ผ่านไป {Math.min(limit.nights,currentNight)} / {limit.nights}</span></div><div className="bw-night-symbols">{Array.from({length:limit.nights},(_,i)=><div key={i} className={`bw-night-symbol ${i+1===data.game.round_number?'is-current':''} ${i<currentNight?'is-past':''}`} title={`คืนที่ ${i+1}`}><Moon size={15}/><small>{i+1}</small></div>)}</div></section>
       <div className="bw-player-two-cards"><button className="bw-reveal-card" onClick={()=>openDetail('role')}><Shield size={27}/><span>บทบาทของฉัน</span><small>แตะเพื่อเปิดเผย <ChevronRight size={13}/></small></button><button className="bw-reveal-card bw-objective-card" onClick={()=>openDetail('objective')}><ScrollText size={27}/><span>ภารกิจลับ</span><small>{data.game.objectives_enabled&&objective?`${Math.min(objective.current,objective.target)}/${objective.target}`:data.game.objectives_enabled?'แตะเพื่อเปิดอ่าน':'ไม่ได้เปิดใช้งาน'} <ChevronRight size={13}/></small>{data.game.objectives_enabled&&objective&&<div className="bw-objective-progress" aria-label={`ความคืบหน้า ${objective.current} จาก ${objective.target}`}>{Array.from({length:Math.max(1,objective.target)},(_,i)=><span key={i} className={i<objective.current?'is-done':''}/>)}</div>}</button></div>
-      <div className="bw-player-clock"><DiscussionTimer code={code} moderator={false} phase={phase}/></div>
+      <VillageLocationStatus playerCount={data.players.length} burnedLocations={data.burnedLocations} burnedCount={data.burnedCount}/>
       <section className="bw-player-action"><div className="bw-key-action-label"><h2>{phase==='day'?'☀️ ลงคะแนนประจำวัน':phase==='night'?'🌙 สำรวจหมู่บ้านยามค่ำคืน':phase==='night_zero'?'🌙 คืนแห่งการเปิดเผย':'บทสรุปของหมู่บ้าน'}</h2></div>
         {isExiled&&<p className="bw-exiled-note">คุณถูกเนรเทศแล้ว ไม่สามารถลงคะแนนหรือเลือกสถานที่ได้</p>}
         {phase==='day'&&!isExiled&&<DayVotePanel code={code} navigation={null}/>}
@@ -59,7 +56,7 @@ export function PlayerGameScreen({code,data,storyOpen,onStoryClose,error}:{code:
         {phase!=='finished'&&phase!=='night_zero'&&<SpecialLocationPanel code={code} moderator={false}/>}
         {isExiled&&phase!=='night_zero'&&phase!=='finished'&&<NeighborLetterPanel code={code} moderator={false} selfId={data.selfId} eliminated={true}/>}
       </section>
-      <section className="bw-village-map"><div className="bw-section-label"><Flame size={17}/><h2>สถานที่ในหมู่บ้าน</h2><span>{data.burnedCount??0} แห่งถูกเผา</span></div><div className="bw-place-grid">{locations.slice(0,limit.locations).map(({name,icon:Icon})=><div key={name} className="bw-place-tile"><Icon size={21}/><span>{name}</span></div>)}</div><p className="bw-map-note">สถานะการเผารวม {data.burnedCount??0} แห่ง · รายละเอียดสถานที่ดูได้ในช่วงเลือกสถานที่</p></section>
+      <div className="bw-player-clock"><DiscussionTimer code={code} moderator={false} phase={phase}/></div>
       <section className="bw-villagers"><div className="bw-section-label"><Users size={17}/><h2>สถานะชาวบ้าน</h2><span>{data.players.filter(p=>p.status!=='eliminated').length} คนที่ยังอยู่</span></div><div className="bw-villager-grid">{data.players.map(p=><div key={p.id} className={`bw-villager-tile ${p.status==='eliminated'?'is-out':''}`}><span className="bw-villager-dot"/><span className="bw-villager-name">{p.display_name}{p.id===data.selfId?' (คุณ)':''}</span></div>)}</div></section>
       {data.selfId&&phase!=='night_zero'&&<SecretLetterPopup code={code} playerId={data.selfId} round={data.game.round_number} phase={phase} revision={data.game.bw_timeline_revision??0}/>}
       {error&&<p role="alert" className="bw-error">{error}</p>}
