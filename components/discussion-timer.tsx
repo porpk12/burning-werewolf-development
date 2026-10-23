@@ -11,7 +11,24 @@ export function DiscussionTimer({code,moderator,phase}:{code:string;moderator:bo
  const [expiredNotice,setExpiredNotice]=useState(false)
  const notifiedRef=useRef<string|null>(null)
  const load=useCallback(async()=>{try{const r=await fetch(`/api/discussion-timer?code=${encodeURIComponent(code)}`,{cache:'no-store'});const x=await r.json();if(r.ok)setTimer(x.timer)}catch{}},[code])
- useEffect(()=>{void load();const id=setInterval(()=>{setNow(Date.now());void load()},3000);return()=>clearInterval(id)},[load])
+ useEffect(() => {
+  void load()
+
+  // อัปเดตเวลาบนหน้าจอทุก 1 วินาที
+  const clockId = setInterval(() => {
+    setNow(Date.now())
+  }, 1000)
+
+  // ดึงข้อมูลจาก Server ทุก 3 วินาทีเหมือนเดิม
+  const syncId = setInterval(() => {
+    void load()
+  }, 3000)
+
+  return () => {
+    clearInterval(clockId)
+    clearInterval(syncId)
+  }
+}, [load])
  const target=phase==='day'?'night':'day'
  const active=timer?.target_phase===target
  const left=active?(timer?.ends_at?Math.max(0,Math.ceil((new Date(timer.ends_at).getTime()-now)/1000)):timer?.remaining_seconds??0):0
