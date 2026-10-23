@@ -68,8 +68,9 @@ export async function GET(request: Request) {
       teammates = (players ?? []).filter(player => wolfIds.includes(player.id)).map(player => player.display_name)
     }
   }
-  const { count: burnedCount, error: burnedError } = await admin.from('night_burned_locations')
-    .select('location_id', { count: 'exact', head: true }).eq('game_id', game.id)
+  const { data: burnedRows, error: burnedError } = await admin.from('night_burned_locations')
+    .select('location_id')
+    .eq('game_id', game.id)
   const { data: objectives, error: objectiveError } = game.objectives_enabled && game.phase !== 'lobby'
     ? await admin.rpc('bw_objective_status', { p_game_id: game.id }) : { data: [], error: null }
   if (objectiveError) return NextResponse.json({ error: 'โหลดเป้าหมายลับไม่สำเร็จ กรุณาตรวจสอบ SQL Migration' }, { status: 500 })
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     const active = (players ?? []).filter(player => player.status === 'connected')
     submissionStatus = { phase: game.phase, submitted: active.filter(player => ids.has(player.id)).map(player => player.display_name), pending: active.filter(player => !ids.has(player.id)).map(player => player.display_name) }
   }
-  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled, started_at: game.started_at }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled, started_at: game.started_at }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedRows?.length ?? 0), burnedLocations: burnedError ? [] : (burnedRows ?? []).map(row => row.location_id), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
