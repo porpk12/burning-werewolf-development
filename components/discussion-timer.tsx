@@ -11,24 +11,7 @@ export function DiscussionTimer({code,moderator,phase}:{code:string;moderator:bo
  const [expiredNotice,setExpiredNotice]=useState(false)
  const notifiedRef=useRef<string|null>(null)
  const load=useCallback(async()=>{try{const r=await fetch(`/api/discussion-timer?code=${encodeURIComponent(code)}`,{cache:'no-store'});const x=await r.json();if(r.ok)setTimer(x.timer)}catch{}},[code])
- useEffect(() => {
-  void load()
-
-  // อัปเดตเวลาบนหน้าจอทุก 1 วินาที
-  const clockId = setInterval(() => {
-    setNow(Date.now())
-  }, 1000)
-
-  // ดึงข้อมูลจาก Server ทุก 3 วินาทีเหมือนเดิม
-  const syncId = setInterval(() => {
-    void load()
-  }, 3000)
-
-  return () => {
-    clearInterval(clockId)
-    clearInterval(syncId)
-  }
-}, [load])
+ useEffect(()=>{void load();const id=setInterval(()=>{setNow(Date.now());void load()},3000);return()=>clearInterval(id)},[load])
  const target=phase==='day'?'night':'day'
  const active=timer?.target_phase===target
  const left=active?(timer?.ends_at?Math.max(0,Math.ceil((new Date(timer.ends_at).getTime()-now)/1000)):timer?.remaining_seconds??0):0
@@ -51,7 +34,7 @@ export function DiscussionTimer({code,moderator,phase}:{code:string;moderator:bo
   <p className="bw-discussion-status">{!active?'รอ Moderator เริ่มช่วงสนทนา':left===0?'หมดเวลาแล้ว · รอ Moderator เปลี่ยน Phase':timer?.ends_at?'กำลังนับถอยหลัง':'หยุดชั่วคราว'}</p>
   {moderator&&<div className="mt-3 flex flex-wrap items-center gap-2 text-sm"><label>เวลา <select value={seconds} onChange={e=>setSeconds(Number(e.target.value))} className="rounded bg-[#170f0d] p-2"><option value={120}>2 นาที</option><option value={180}>3 นาที</option><option value={300}>5 นาที</option><option value={600}>10 นาที</option></select></label><button disabled={busy} onClick={()=>void control('start')} className="rounded border border-amber-500 p-2">เริ่มใหม่</button><button disabled={busy||!active||!timer?.ends_at} onClick={()=>void control('pause')} className="rounded border border-amber-500 p-2 disabled:opacity-40">หยุด</button><button disabled={busy||!active||!!timer?.ends_at||left===0} onClick={()=>void control('resume')} className="rounded border border-amber-500 p-2 disabled:opacity-40">ต่อ</button><button disabled={busy||!active} onClick={()=>void control('extend')} className="rounded border border-amber-500 p-2 disabled:opacity-40">+1 นาที</button><button disabled={busy||!active} onClick={()=>void control('end')} className="rounded border border-amber-500 p-2 disabled:opacity-40">จบสนทนา</button></div>}
   {moderator&&<p className="mt-2 text-xs text-[#b7aaa0]">เวลาหมดไม่เปลี่ยน Phase อัตโนมัติ · Moderator เป็นผู้กดเปลี่ยนเอง</p>}
-  {expiredNotice&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4" role="presentation"><div role="alertdialog" aria-modal="true" aria-labelledby="bw-timer-expired-title" aria-describedby="bw-timer-expired-description" className="w-full max-w-sm rounded-2xl border border-[#79613f] bg-[#222824] p-6 text-center text-[#f3e6cb] shadow-2xl"><div className="mb-3 text-4xl" aria-hidden="true">⌛</div><h2 id="bw-timer-expired-title" className="text-xl font-bold">หมดเวลาแล้ว</h2><p id="bw-timer-expired-description" className="mt-3 text-sm text-[#c9c5b8]">{moderator?'คุณสามารถต่อเวลา หรือจบสนทนาได้จากแผงควบคุม'}</p><button autoFocus onClick={()=>setExpiredNotice(false)} className="mt-5 w-full rounded-lg bg-[#b89459] px-4 py-3 font-semibold text-[#171b19] hover:bg-[#d1ab69]">รับทราบ</button></div></div>}
+  {expiredNotice&&<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4" role="presentation"><div role="alertdialog" aria-modal="true" aria-labelledby="bw-timer-expired-title" className="w-full max-w-sm rounded-2xl border border-[#79613f] bg-[#222824] p-6 text-center text-[#f3e6cb] shadow-2xl"><div className="mb-3 text-4xl" aria-hidden="true">⌛</div><h2 id="bw-timer-expired-title" className="text-4xl font-extrabold tracking-wide">หมดเวลา</h2><button autoFocus onClick={()=>setExpiredNotice(false)} className="mt-5 w-full rounded-lg bg-[#b89459] px-4 py-3 font-semibold text-[#171b19] hover:bg-[#d1ab69]">รับทราบ</button></div></div>}
   {error&&<p role="alert" className="mt-2 text-red-300">{error}</p>}
  </section>
 }
