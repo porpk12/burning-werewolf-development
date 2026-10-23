@@ -25,10 +25,12 @@ export function VillageLocationStatus({ playerCount, burnedLocations = [], burne
           const burned = burnedLocations.includes(loc.id)
           const Icon = iconByName[loc.name] ?? BookOpen
           return (
-            <div key={loc.id} className={`bw-place-tile ${burned ? 'is-burned' : ''}`} style={{ flex: '1 0 78px', minWidth: 78, minHeight: 52, flexDirection: 'column', gap: 2, padding: '5px 3px', fontSize: 11 }}>
-              <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+            <div key={loc.id} className={`bw-place-tile ${burned ? 'is-burned' : ''}`} style={{ position: 'relative', flex: '1 0 78px', minWidth: 78, minHeight: 46, flexDirection: 'column', gap: 3, padding: '7px 3px', fontSize: 11, background: burned ? '#241b19' : undefined, borderColor: burned ? '#8a4331' : undefined, color: burned ? '#9c8981' : undefined }} aria-label={`${loc.name}${burned ? ' ถูกเผาแล้ว' : ' ยังไม่ถูกเผา'}`}>
+              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: burned ? 0.45 : 1, filter: burned ? 'grayscale(1)' : 'none' }}>
+                <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+              </span>
+              {burned && <Flame size={13} strokeWidth={2.4} aria-hidden="true" style={{ position: 'absolute', top: 3, right: 5, color: '#ef784e', filter: 'drop-shadow(0 0 3px #d64d28)' }} />}
               <span>{loc.name}</span>
-              <small style={{ fontSize: 9, whiteSpace: 'nowrap' }}>{burned ? 'ถูกเผาแล้ว' : 'ยังไม่ถูกเผา'}</small>
             </div>
           )
         })}
