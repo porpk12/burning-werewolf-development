@@ -1263,3 +1263,18 @@ button, input, textarea, select { font: inherit; }
 .bw-player-scene .bw-village-map .bw-place-tile.is-burned > svg {
   color: #e9754d;
 }
+
+/* Player night progression: moons are read-only markers, not circular buttons. */
+.bw-player-scene .bw-night-path .bw-night-symbols .bw-night-symbol {
+  background: transparent !important; border: 0 !important; border-radius: 0 !important;
+  box-shadow: none !important; outline: 0 !important; cursor: default !important;
+  pointer-events: none; transition: none !important; transform: none !important;
+}
+.bw-player-scene .bw-night-path .bw-night-symbols .bw-night-symbol::before,
+.bw-player-scene .bw-night-path .bw-night-symbols .bw-night-symbol::after {
+  content: none !important; display: none !important; border: 0 !important; box-shadow: none !important;
+}
+.bw-player-scene .bw-night-path .bw-night-symbols .bw-night-symbol:hover,
+.bw-player-scene .bw-night-path .bw-night-symbols .bw-night-symbol:active {
+  background: transparent !important; box-shadow: none !important; transform: none !important;
+}
