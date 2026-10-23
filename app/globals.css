@@ -1231,3 +1231,35 @@ button, input, textarea, select { font: inherit; }
   cursor: default;
   box-shadow: none;
 }
+
+/* Player-only village overview: informational icons, not interactive cards. */
+.bw-player-scene .bw-village-map .bw-place-grid {
+  gap: 2px !important;
+}
+.bw-player-scene .bw-village-map .bw-place-tile {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  cursor: default !important;
+  padding: 7px 3px !important;
+  min-height: 46px;
+  transition: none !important;
+  transform: none !important;
+}
+.bw-player-scene .bw-village-map .bw-place-tile:hover,
+.bw-player-scene .bw-village-map .bw-place-tile:active,
+.bw-player-scene .bw-village-map .bw-place-tile:focus {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.bw-player-scene .bw-village-map .bw-place-tile.is-burned {
+  opacity: .68;
+  color: #ad8c81 !important;
+}
+.bw-player-scene .bw-village-map .bw-place-tile.is-burned > svg {
+  color: #e9754d;
+}
