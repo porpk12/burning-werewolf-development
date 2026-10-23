@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const code = new URL(request.url).searchParams.get('code')?.trim().toUpperCase() ?? ''
   if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
-  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, room_name, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id, winner, win_reason, objectives_enabled, bw_timeline_revision').eq('room_code', code).maybeSingle()
+  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, room_name, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id, winner, win_reason, objectives_enabled, started_at').eq('room_code', code).maybeSingle()
   if (gameError || !game) return NextResponse.json({ error: 'ไม่พบห้อง' }, { status: 404 })
   const moderator = await getModerator()
   const isOwner = moderator?.id === game.moderator_id
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     const active = (players ?? []).filter(player => player.status === 'connected')
     submissionStatus = { phase: game.phase, submitted: active.filter(player => ids.has(player.id)).map(player => player.display_name), pending: active.filter(player => !ids.has(player.id)).map(player => player.display_name) }
   }
-  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled, started_at: game.started_at }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedCount ?? 0), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
@@ -144,9 +144,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'กลับสู่ Lobby แล้ว แต่รีเซ็ตค่า Secret Objectives ไม่สำเร็จ' }, { status: 500 })
     }
     await admin.from('bw_discussion_timers').delete().eq('game_id', game.id)
-    const { data: revisionRow } = await admin.from('games').select('bw_timeline_revision').eq('id', game.id).single()
-    const { error: revisionError } = await admin.from('games').update({ bw_timeline_revision: (revisionRow?.bw_timeline_revision ?? 0) + 1 }).eq('id', game.id)
-    if (revisionError) return NextResponse.json({ error: 'รีเซ็ตเกมแล้ว แต่ไม่สามารถรีเซ็ตประวัติข้อความได้' }, { status: 500 })
     return NextResponse.json({ ok: true, phase: 'lobby' })
   }
   if (game.phase !== 'lobby') return NextResponse.json({ error: 'ห้องนี้เริ่มเกมแล้ว' }, { status: 409 })
