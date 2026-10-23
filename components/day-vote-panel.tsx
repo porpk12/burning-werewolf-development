@@ -111,13 +111,13 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
           </div>}
         </div>}
       </div>}
-    </> : data?.votingClosed ? <p className="mt-4 text-[#d4a65a]">ปิดลงคะแนนแล้ว · ผลคะแนนแสดงเฉพาะ Moderator</p> : <>
+    </> : data?.votingClosed ? <p className="mt-4 text-[#d4a65a]">ปิดการลงคะแนนแล้ว</p> : <>
       <p className="mt-3 text-sm text-[#b7aaa0]">สามารถลงคะแนนไม่เชื่อใจและเชื่อใจได้อย่างละ 1 คะแนน</p>
       <label className="mt-4 block text-sm">ไม่เชื่อใจ</label><select value={distrust} onChange={e => setDistrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{distrustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <label className="mt-4 block text-sm">เชื่อใจ</label><select value={trust} onChange={e => setTrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{trustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <button type="button" disabled={busy || !trust || !distrust} onClick={() => void submit()} className="mt-4 rounded bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">{busy ? 'กำลังบันทึก…' : data?.ownVote ? 'แก้ไขคะแนน' : 'ยืนยันคะแนน'}</button>
       {data?.marketBonus && <div className="mt-4 rounded border border-[#d4a65a] p-3"><p className="font-semibold">🛒 สิทธิ์ตลาด: ไม่เชื่อใจเพิ่มอีก 1 เสียง</p><p className="mt-1 text-xs text-[#b7aaa0]">เลือกคนเดิมซ้ำหรือคนอื่นก็ได้ · ข้อมูลนี้เป็นความลับ</p><select disabled={busy} defaultValue={data.marketBonus.target??''} key={data.marketBonus.target??'unset'} onChange={e=>{if(e.target.value)void submitMarket(e.target.value)}} className="mt-2 w-full rounded bg-[#2b201b] p-3"><option value="">-- เลือกผู้รับคะแนนพิเศษ --</option>{distrustChoices.map(p=><option key={p.id} value={p.id}>{p.display_name}</option>)}</select></div>}
-      {data?.ownVote && <p className="mt-2 text-sm text-[#d4a65a]">คุณลงคะแนนแล้ว สามารถเปลี่ยนได้ระหว่าง Day นี้</p>}
+      {data?.ownVote && <p className="mt-2 text-sm text-[#d4a65a]">ลงคะแนนเรียบร้อยแล้ว สามารถแก้ไขได้</p>}
     </>}
     {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
   </section>
