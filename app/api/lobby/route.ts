@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const code = new URL(request.url).searchParams.get('code')?.trim().toUpperCase() ?? ''
   if (!/^[A-Z0-9]{6}$/.test(code)) return NextResponse.json({ error: 'รหัสห้องไม่ถูกต้อง' }, { status: 400 })
   const admin = adminClient()
-  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, room_name, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id, winner, win_reason, objectives_enabled, started_at').eq('room_code', code).maybeSingle()
+  const { data: game, error: gameError } = await admin.from('games').select('id, room_code, room_name, phase, round_number, voting_closed, player_limit, werewolf_count, lobby_open, moderator_id, winner, win_reason, objectives_enabled, started_at, results_announced').eq('room_code', code).maybeSingle()
   if (gameError || !game) return NextResponse.json({ error: 'ไม่พบห้อง' }, { status: 404 })
   const moderator = await getModerator()
   const isOwner = moderator?.id === game.moderator_id
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     const active = (players ?? []).filter(player => player.status === 'connected')
     submissionStatus = { phase: game.phase, submitted: active.filter(player => ids.has(player.id)).map(player => player.display_name), pending: active.filter(player => !ids.has(player.id)).map(player => player.display_name) }
   }
-  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: game.winner, win_reason: game.win_reason, objectives_enabled: game.objectives_enabled, started_at: game.started_at }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedRows?.length ?? 0), burnedLocations: burnedError ? [] : (burnedRows ?? []).map(row => row.location_id), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ submissionStatus, objectives: visibleObjectives, game: { room_code: game.room_code, room_name: game.room_name, phase: game.phase, round_number: game.round_number, voting_closed: game.voting_closed, player_limit: game.player_limit, werewolf_count: game.werewolf_count, lobby_open: game.lobby_open, winner: isOwner || game.results_announced ? game.winner : null, win_reason: isOwner || game.results_announced ? game.win_reason : null, objectives_enabled: game.objectives_enabled, started_at: game.started_at, results_announced: game.results_announced }, players: isOwner ? (players ?? []) : visiblePlayers, tutorialProgress, latestExileNames: isOwner ? undefined : latestExileNames, burnedCount: burnedError ? 0 : (burnedRows?.length ?? 0), burnedLocations: burnedError ? [] : (burnedRows ?? []).map(row => row.location_id), isModerator: isOwner, selfId, ...(isOwner ? { moderatorRoles } : { ownRole, teammates }) }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(request: Request) {
