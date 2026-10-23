@@ -42,7 +42,7 @@ export function NightZeroPanel({ code, moderator, phase }: { code: string; moder
     finally { setBusy(false) }
   }
 
-  if (phase === 'day') return <section className="mt-6 rounded-lg border border-[#6e4e2f] p-4"><h2 className="text-xl font-semibold">Day 1</h2><p className="mt-2 text-sm text-[#b7aaa0]">เข้าสู่ Day 1 แล้ว · ระบบโหวตจะพัฒนาในขั้นถัดไป</p></section>
+  if (phase === 'day') return <section className="mt-6 rounded-lg border border-[#6e4e2f] p-4"><h2 className="text-xl font-semibold">Day 1</h2><p className="mt-2 text-sm text-[#b7aaa0]">เข้าสู่ Day 1 แล้ว · ระบบลงคะแนนจะพัฒนาในขั้นถัดไป</p></section>
   return <section className="mt-6 rounded-lg border border-[#6e4e2f] bg-[#170f0d] p-4">
     <h2 className="text-xl font-semibold text-[#d4a65a]">Night 0 — คืนเปิดเผยตัวตน</h2>
     {moderator ? <>
