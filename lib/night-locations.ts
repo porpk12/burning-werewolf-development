@@ -1,10 +1,10 @@
 export const LOCATIONS = [
-  { id: 'library', name: 'ห้องสมุด', icon: '📚', description: 'รับเบาะแสลึกลับหนึ่งชิ้น โดยไม่รู้ล่วงหน้าว่าจะได้ข้อมูลอะไร', small: 2, large: 2 },
-  { id: 'fortress', name: 'ป้อมปราการ', icon: '🏰', description: 'เลือกปกป้องสถานที่หนึ่งแห่งจากการถูกเผาในคืนนี้', small: 1, large: 1 },
-  { id: 'brothel', name: 'ซ่อง', icon: '🍷', description: 'เลือกตรวจสอบผู้เล่นหนึ่งคนว่าเป็นหมาป่าหรือไม่', small: 2, large: 2 },
-  { id: 'tavern', name: 'โรงเตี๊ยม', icon: '🍺', description: 'รับข้อมูลจำนวนผู้เลือกสถานที่บางส่วน โดยสุ่มแบ่งเป็นสองส่วน', small: 2, large: 2 },
-  { id: 'church', name: 'โบสถ์', icon: '⛪', description: 'ได้รับสิทธิ์ป้องกันการถูกเนรเทศในวันถัดไป', small: 1, large: 2 },
-  { id: 'market', name: 'ตลาด', icon: '🛒', description: 'ได้รับสิทธิ์โหวตไม่เชื่อใจเพิ่มหนึ่งเสียงในวันถัดไป', small: 0, large: 1 },
+  { id: 'library', name: 'ห้องสมุด', icon: '📚', description: 'ได้รับเบาะแสลึกลับ', small: 2, large: 2 },
+  { id: 'fortress', name: 'ป้อมปราการ', icon: '🏰', description: 'เลือกสถานที่ที่จะปกป้องไม่ให้ถูกเผา', small: 1, large: 1 },
+  { id: 'brothel', name: 'ซ่อง', icon: '🍷', description: '', small: 2, large: 2 },
+  { id: 'tavern', name: 'โรงเตี๊ยม', icon: '🍺', description: 'รับรู้ว่าเมื่อคืนแต่ละสถานที่มีผู้เข้าใช้งานทั้งสิ้นกี่คน', small: 2, large: 2 },
+  { id: 'church', name: 'โบสถ์', icon: '⛪', description: 'ได้รับการป้องกันจากการถูกเนรเทศในเช้าวันถัดไป', small: 1, large: 2 },
+  { id: 'market', name: 'ตลาด', icon: '🛒', description: 'ได้รับสิทธิ์ลงคะแนนไม่เชื่อใจเพิ่มอีก 1 คะแนน', small: 0, large: 1 },
 ] as const
 export function locationsFor(count: number) {
   if (count <= 7) return LOCATIONS.filter(x => ['library','fortress','brothel','tavern'].includes(x.id)).map(x => ({ ...x, capacity: x.id === 'library' ? 2 : 1 }))
