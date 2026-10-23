@@ -17,7 +17,7 @@ import { PlayerGameScreen } from '@/components/player-game-screen'
 type Player = { id: string; display_name: string; seat_number: number; status: string }
 type TutorialProgress = { step: number; started: boolean; completed: boolean }
 type Objective = {player_id:string; objective_key:string; title:string; description:string; current:number; target:number; completed:boolean}
-type LobbyData = { submissionStatus?: {phase:string;submitted:string[];pending:string[]}; objectives?: Objective[]; tutorialProgress?: Record<string, TutorialProgress>; game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean; winner?: 'werewolf' | 'villager' | null; win_reason?: string | null; objectives_enabled?: boolean }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
+type LobbyData = { submissionStatus?: {phase:string;submitted:string[];pending:string[]}; objectives?: Objective[]; tutorialProgress?: Record<string, TutorialProgress>; game: { room_code: string; phase: string; round_number: number; voting_closed: boolean; player_limit: number | null; werewolf_count: number; lobby_open: boolean; winner?: 'werewolf' | 'villager' | null; win_reason?: string | null; objectives_enabled?: boolean; started_at?: string | null }; burnedCount?: number; latestExileNames?: string[]; players: Player[]; isModerator: boolean; selfId: string | null; ownRole?: 'werewolf' | 'villager' | null; teammates?: string[]; moderatorRoles?: Record<string, string> }
 
 function phaseDestination(phase: string, round: number, direction: 'back' | 'forward'): string {
   if (direction === 'back') {
@@ -41,7 +41,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   const [kickTarget, setKickTarget] = useState<Player | null>(null)
   const [showOwnRole, setShowOwnRole] = useState(false)
   const [storyOpen, setStoryOpen] = useState(false)
-  const [storySeen, setStorySeen] = useState(false)
+  
   const [visibleRoles, setVisibleRoles] = useState<Record<string, boolean>>({})
   const [wolfCount, setWolfCount] = useState(1)
   const [objectivesEnabled, setObjectivesEnabled] = useState(true)
@@ -53,9 +53,10 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
       if (!response.ok) { setError(result.error ?? 'โหลดข้อมูลไม่สำเร็จ'); return }
       setData(result)
       if (!moderator && result.game.phase === 'night_zero') {
-        const key = `bw_intro_${code}_${result.game.round_number}`
-        if (!window.sessionStorage.getItem(key)) { setStoryOpen(true); setStorySeen(false) }
+        const key = `bw_intro_${code}_${result.selfId ?? 'unknown'}_${result.game.started_at ?? 'not-started'}`
+        setStoryOpen(!window.sessionStorage.getItem(key))
       }
+      if (!moderator && result.game.phase === 'lobby') setStoryOpen(false)
       if (!moderator && result.selfId) window.localStorage.setItem('bwf_last_room', code)
       if (!settingsChanged) { setWolfCount(result.game.werewolf_count); setObjectivesEnabled(result.game.objectives_enabled !== false) }
       setError('')
@@ -127,8 +128,8 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
     finally { setBusy(false) }
   }
   function acknowledgeStory() {
-    window.sessionStorage.setItem(`bw_intro_${code}_${data?.game.round_number ?? 0}`, '1')
-    setStoryOpen(false); setStorySeen(true); setShowOwnRole(true)
+    window.sessionStorage.setItem(`bw_intro_${code}_${data?.selfId ?? 'unknown'}_${data?.game.started_at ?? 'not-started'}`, '1')
+    setStoryOpen(false); setShowOwnRole(true)
   }
   const exiled = !moderator && data?.players.some(p => p.id === data.selfId && p.status === 'eliminated')
   if (!moderator && data && data.game.phase !== 'lobby') return <PlayerGameScreen code={code} data={data} storyOpen={storyOpen} onStoryClose={acknowledgeStory} error={error} />
