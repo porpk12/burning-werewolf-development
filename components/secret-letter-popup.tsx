@@ -8,13 +8,13 @@ type NeighborResponse = { letters?: { id: string; status: string; reviewed_body?
 
 // The API already restricts these responses to the current authenticated player.
 // Never request or display moderator-only message collections here.
-export function SecretLetterPopup({ code, playerId, round, phase }: { code: string; playerId: string; round: number; phase: string }) {
+export function SecretLetterPopup({ code, playerId, round, phase, revision = 0 }: { code: string; playerId: string; round: number; phase: string; revision?: number }) {
   const [queue, setQueue] = useState<Letter[]>([])
   const [opened, setOpened] = useState(false)
   const [history, setHistory] = useState<Letter[]>([])
   const [historyOpen, setHistoryOpen] = useState(false)
   const busy = useRef(false)
-  const prefix = `bw_letters_v1:${code}:${playerId}:`
+  const prefix = `bw_letters_v2:${code}:${playerId}:revision-${revision}:`
 
   const markSeen = useCallback((key: string) => {
     try { window.localStorage.setItem(prefix + key, '1') } catch { /* private browsing */ }
@@ -40,30 +40,23 @@ export function SecretLetterPopup({ code, playerId, round, phase }: { code: stri
       if (neighbor.ok) {
         const data = await neighbor.json() as NeighborResponse
         for (const letter of data.letters ?? []) {
-          if (letter.status === 'delivered' && letter.reviewed_body) {
+          if (letter.status === 'delivered' && letter.reviewed_body && typeof letter.delivered_round === 'number' && letter.delivered_round <= round) {
             items.push({ key: `neighbor:${letter.id}`, title: 'จดหมายปริศนา', subtitle: `จากหมู่บ้านข้างเคียง · คืนที่ ${letter.delivered_round ?? round}`, body: letter.reviewed_body })
           }
         }
       }
-      setHistory(old => {
-        const map = new Map(old.map(item => [item.key, item]))
-        for (const item of items) map.set(item.key, item)
-        return Array.from(map.values())
-      })
+      // Rebuild from authoritative current-timeline results, never merge stale local history.
+      setHistory(items)
       const unread = items.filter(item => {
         try { return window.localStorage.getItem(prefix + item.key) !== '1' } catch { return true }
       })
-      setQueue(old => {
-        const map = new Map(old.map(item => [item.key, item]))
-        for (const item of unread) map.set(item.key, item)
-        return Array.from(map.values())
-      })
+      setQueue(unread)
     } catch { /* Retry next poll when connection returns */ }
     finally { busy.current = false }
-  }, [code, phase, prefix, round])
+  }, [code, phase, prefix, round, revision])
 
   useEffect(() => { void check(); const timer = window.setInterval(() => void check(), 3000); return () => window.clearInterval(timer) }, [check])
-  useEffect(() => { setQueue([]); setHistory([]); setOpened(false); setHistoryOpen(false) }, [code, playerId])
+  useEffect(() => { setQueue([]); setHistory([]); setOpened(false); setHistoryOpen(false) }, [code, playerId, revision])
 
   const active = queue[0]
   function dismiss() {
