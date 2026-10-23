@@ -37,7 +37,12 @@ export async function POST(request:Request){
   else if(body.action==='extend')next={remaining_seconds:Math.min(3600,remaining+60),ends_at:timer.ends_at?new Date(now+(remaining+60)*1000).toISOString():null}
   else next={remaining_seconds:0,ends_at:null}
  }
- const {error}=await ctx.db.from('bw_discussion_timers').upsert({game_id:ctx.game.id,...next,updated_at:new Date().toISOString()},{onConflict:'game_id'})
+ // Non-start actions must UPDATE the existing row. UPSERT with a partial payload
+ // tries an INSERT without target_phase and violates its NOT NULL constraint.
+ const payload={...next,updated_at:new Date().toISOString()}
+ const {error}=body.action==='start'
+  ? await ctx.db.from('bw_discussion_timers').upsert({game_id:ctx.game.id,...payload},{onConflict:'game_id'})
+  : await ctx.db.from('bw_discussion_timers').update(payload).eq('game_id',ctx.game.id)
  if(error)return NextResponse.json({error:error.message},{status:500})
  return NextResponse.json({ok:true})
 }
