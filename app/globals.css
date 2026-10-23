@@ -1145,3 +1145,15 @@ button, input, textarea, select { font: inherit; }
 .bw-mod-key-action>section div[class*="border-[#4b3226]"]{border-color:#4b5a4e!important;background:#28332d!important;border-radius:10px}
 .bw-moderator-scene .bw-discussion-strip{background:#2c3730;border:1px solid #435047}
 @media(max-width:540px){.bw-player-action,.bw-mod-key-action{padding:13px}.bw-key-action-label h2{font-size:17px}}
+
+/* Key Action focus: strong but restrained focal hierarchy on mobile and desktop */
+.bw-player-action,.bw-mod-key-action{position:relative;isolation:isolate;border:1.5px solid #c2a06a!important;background:linear-gradient(145deg,#303b32 0%,#242f29 65%,#202a25 100%)!important;box-shadow:0 0 0 3px rgba(190,155,96,.10),0 14px 38px rgba(0,0,0,.30)!important}
+.bw-player-action::before,.bw-mod-key-action::before{content:"";position:absolute;top:0;left:20px;right:20px;height:2px;background:linear-gradient(90deg,transparent,#d7b778,transparent);pointer-events:none}
+.bw-key-action-label{border-bottom-color:rgba(214,182,119,.35)!important;margin-bottom:18px!important}
+.bw-key-action-label>span{color:#e6c58b!important;font-size:11px!important;letter-spacing:.19em!important}
+.bw-key-action-label h2{font-size:clamp(20px,2.1vw,25px)!important;color:#fff6e7!important}
+.bw-player-action button:focus-visible,.bw-mod-key-action button:focus-visible{outline:2px solid #f0cc88;outline-offset:3px}
+.bw-location-art{display:block;width:clamp(64px,10vw,90px);height:clamp(64px,10vw,90px);object-fit:cover;border-radius:12px;margin-inline:auto}
+.bw-player-action .grid.grid-cols-2>button{min-height:152px}
+@media(max-width:540px){.bw-player-action{padding:16px!important;margin-inline:0}.bw-key-action-label h2{font-size:21px!important}.bw-location-art{width:72px;height:72px}.bw-player-action .grid.grid-cols-2>button{padding:10px!important;min-height:144px}}
+@media(min-width:1024px){.bw-mod-key-action{padding:24px!important}.bw-mod-key-action .bw-key-action-label h2{font-size:25px!important}}
