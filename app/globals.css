@@ -1278,3 +1278,12 @@ button, input, textarea, select { font: inherit; }
 .bw-player-scene .bw-night-path .bw-night-symbols .bw-night-symbol:active {
   background: transparent !important; box-shadow: none !important; transform: none !important;
 }
+
+/* Completed nights: filled gold moons, without button-like circles. */
+.bw-player-scene .bw-night-path .bw-night-symbol.is-past > svg {
+  color: #f0c45b !important;
+  fill: #f0c45b !important;
+  stroke: #f0c45b !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 3px #c9943840);
+}
