@@ -1157,3 +1157,17 @@ button, input, textarea, select { font: inherit; }
 .bw-player-action .grid.grid-cols-2>button{min-height:152px}
 @media(max-width:540px){.bw-player-action{padding:16px!important;margin-inline:0}.bw-key-action-label h2{font-size:21px!important}.bw-location-art{width:72px;height:72px}.bw-player-action .grid.grid-cols-2>button{padding:10px!important;min-height:144px}}
 @media(min-width:1024px){.bw-mod-key-action{padding:24px!important}.bw-mod-key-action .bw-key-action-label h2{font-size:25px!important}}
+
+/* Shared illustrated location status: mobile-first, same card structure */
+.bw-place-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bw-place-tile{display:flex;flex-direction:column;gap:3px;min-width:0;padding:8px 4px;border:1px solid #465147;border-radius:12px;background:#252e29}
+.bw-place-tile .bw-location-art{width:100%;max-width:88px;height:76px;object-fit:contain;margin:auto;border-radius:8px}
+.bw-place-tile>span{font-size:12px;font-weight:600}
+.bw-place-tile small{font-size:10px;color:#9bc9a0}
+.bw-place-tile.is-burned{border-color:#97564b;background:#302522}
+.bw-place-tile.is-burned .bw-location-art{filter:grayscale(1) brightness(.55)}
+.bw-place-tile.is-burned small{color:#f19c86}
+.bw-moderator-scene .bw-place-grid{grid-template-columns:repeat(auto-fit,minmax(115px,1fr))}
+.bw-moderator-scene .bw-village-map{margin:18px 0}
+.bw-player-clock{margin-top:14px}
+@media(min-width:700px){.bw-place-grid{grid-template-columns:repeat(auto-fit,minmax(115px,1fr))}}
