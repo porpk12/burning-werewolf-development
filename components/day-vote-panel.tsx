@@ -112,7 +112,7 @@ export function DayVotePanel({ code, navigation }: { code: string; navigation?: 
         </div>}
       </div>}
     </> : data?.votingClosed ? <p className="mt-4 text-[#d4a65a]">ปิดลงคะแนนแล้ว · ผลคะแนนแสดงเฉพาะ Moderator</p> : <>
-      <p className="mt-3 text-sm text-[#b7aaa0]">เชื่อใจและไม่เชื่อใจอย่างละ 1 ตัวเลือก หรือเลือกไม่มีได้ · ไม่เชื่อใจตัวเองได้</p>
+      <p className="mt-3 text-sm text-[#b7aaa0]">สามารถลงคะแนนไม่เชื่อใจและเชื่อใจได้อย่างละ 1 คะแนน</p>
       <label className="mt-4 block text-sm">ไม่เชื่อใจ</label><select value={distrust} onChange={e => setDistrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{distrustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <label className="mt-4 block text-sm">เชื่อใจ</label><select value={trust} onChange={e => setTrust(e.target.value)} className="mt-1 w-full rounded bg-[#2b201b] p-3"><option value="">เลือกผู้เล่นหรือไม่มี</option><option value="NO">ไม่มี</option>{trustChoices.map(p => <option key={p.id} value={p.id}>{p.display_name}</option>)}</select>
       <button type="button" disabled={busy || !trust || !distrust} onClick={() => void submit()} className="mt-4 rounded bg-[#d4a65a] px-5 py-3 font-semibold text-[#170f0d] disabled:opacity-50">{busy ? 'กำลังบันทึก…' : data?.ownVote ? 'แก้ไขคะแนน' : 'ยืนยันคะแนน'}</button>
