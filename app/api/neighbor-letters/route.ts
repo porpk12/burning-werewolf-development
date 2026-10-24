@@ -39,7 +39,7 @@ export async function POST(request:Request){
   const reviewed=typeof body.text==='string'?body.text.trim():'';const reason=typeof body.reason==='string'?body.reason.trim():''
   if(body.status==='approved'&&(!reviewed||reviewed.length>1000))return NextResponse.json({error:'กรุณากรอกข้อความที่อนุมัติ'},{status:400})
   if(body.status==='rejected'&&!reason)return NextResponse.json({error:'กรุณาระบุเหตุผลที่ส่งกลับ'},{status:400})
-  const {error}=await db.from('bw_neighbor_letters').update({status:body.status,reviewed_body:body.status==='approved'?reviewed:null,rejection_reason:body.status==='rejected'?reason:null}).eq('id',body.id).eq('game_id',game.id).in('status',['pending','rejected','approved']);if(error)return NextResponse.json({error:error.message},{status:409});return NextResponse.json({ok:true})
+  const {error}=await db.from('bw_neighbor_letters').update({status:body.status,reviewed_body:body.status==='approved'?reviewed:null,rejection_reason:body.status==='rejected'?reason:null}).eq('id',body.id).eq('game_id',game.id).eq('status','pending');if(error)return NextResponse.json({error:error.message},{status:409});return NextResponse.json({ok:true})
  }
  if(body?.action==='deliver'){
   if(game.phase!=='night')return NextResponse.json({error:'ส่งจดหมายได้เฉพาะช่วงกลางคืน'},{status:409})
