@@ -21,6 +21,7 @@ export type PlayerScreenData = {
   burnedCount?:number;burnedLocations?:string[];latestExileNames?:string[]
 }
 export function PlayerGameScreen({code,data,storyOpen,onStoryClose,error,onBackToLobby}:{code:string;data:PlayerScreenData;storyOpen:boolean;onStoryClose:()=>void;error:string;onBackToLobby:()=>void}) {
+  const [confirmHome,setConfirmHome] = useState(false)
   const [detail,setDetail] = useState<'role'|'objective'|null>(null)
   const [detailExpanded,setDetailExpanded] = useState(false)
   const [roleSection,setRoleSection] = useState<'win'|'secret'|null>(null)
@@ -51,11 +52,18 @@ export function PlayerGameScreen({code,data,storyOpen,onStoryClose,error,onBackT
   const currentNight=Math.max(0,data.game.round_number-(phase==='day'?1:0))
   return <main className={`bw-player-scene ${night?'bw-scene-night':'bw-scene-day'}`}>
     <div className="bw-player-page">
+      {confirmHome && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-5" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setConfirmHome(false)}}>
+        <section role="alertdialog" aria-modal="true" aria-labelledby="confirm-home-title" aria-describedby="confirm-home-description" className="w-full max-w-sm rounded-2xl border border-[#896a47] bg-[#211b18] p-6 text-[#e8d7bb] shadow-2xl">
+          <div className="mb-3 flex items-center justify-between"><h2 id="confirm-home-title" className="text-xl font-bold text-[#eac589]">กลับหน้าหลัก?</h2><button type="button" aria-label="ปิด" onClick={()=>setConfirmHome(false)} className="rounded-md p-1 text-[#d8c5aa] hover:bg-white/10"><X size={20}/></button></div>
+          <p id="confirm-home-description" className="mb-5 text-sm leading-7 text-[#c9b8a3]">ต้องการกลับไปหน้าหลักของ Burning Werewolf จริงหรือไม่? เกมจะยังดำเนินต่อไปตามปกติ และคุณสามารถกลับเข้าห้องเดิมได้ภายหลัง</p>
+          <div className="flex gap-3"><button type="button" autoFocus onClick={()=>setConfirmHome(false)} className="flex-1 rounded-lg border border-[#78614c] px-3 py-3 text-sm font-semibold text-[#e7d3b7]">อยู่ในเกมต่อ</button><button type="button" onClick={()=>window.location.assign('/')} className="flex-1 rounded-lg bg-[#cba15e] px-3 py-3 text-sm font-bold text-[#211810]">ยืนยันกลับหน้าหลัก</button></div>
+        </section>
+      </div>}
       <header className="bw-player-header">
         <div className="bw-player-brand"><span className="bw-player-overline">THE BURNING VILLAGE</span><h1>Burning <em>Werewolf</em></h1></div>
         <div className="bw-phase-medallion">{night?<Moon size={24}/>:<Sun size={24}/>}<span>{phase==='night_zero'?'คืนที่ 0':phase==='finished'?'สิ้นสุดเกม':`${night?'คืน':'วัน'}ที่ ${data.game.round_number}`}</span></div>
       </header>
-      <div className="mb-3 flex justify-end"><button type="button" onClick={onBackToLobby} className="rounded-lg border border-[#7a6148] bg-[#211b18] px-3 py-2 text-xs font-medium text-[#e4cda8] hover:bg-[#30241d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">← กลับ Lobby</button></div>
+      <div className="mb-3 flex justify-end"><button type="button" onClick={() => setConfirmHome(true)} className="rounded-lg border border-[#7a6148] bg-[#211b18] px-3 py-2 text-xs font-medium text-[#e4cda8] hover:bg-[#30241d] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400">← กลับหน้าหลัก</button></div>
       <section className="bw-night-path" aria-label="คืนที่เหลืออยู่"><div className="bw-night-path-title"><span>เส้นทางแห่งรัตติกาล</span><span>คืนที่ผ่านไป {Math.min(limit.nights,currentNight)} / {limit.nights}</span></div><div className="bw-night-symbols">{Array.from({length:limit.nights},(_,i)=><div key={i} className={`bw-night-symbol ${i+1===data.game.round_number?'is-current':''} ${i<currentNight?'is-past':''}`} title={`คืนที่ ${i+1}`}><Moon size={15}/>{i+1===5&&limit.nights>5&&<Flame size={11} className="text-red-400" aria-label="ลางแห่งหายนะ"/>}<small>{i+1}</small></div>)}</div></section>
       <div className="bw-player-two-cards"><button className="bw-reveal-card" onClick={()=>openDetail('role')}><Shield size={27}/><span>บทบาทของฉัน</span><small>แตะเพื่อเปิดเผย <ChevronRight size={13}/></small></button><button className="bw-reveal-card bw-objective-card" onClick={()=>openDetail('objective')}><ScrollText size={27}/><span>ภารกิจลับ</span><small>{data.game.objectives_enabled&&objective?`${Math.min(objective.current,objective.target)}/${objective.target}`:data.game.objectives_enabled?'แตะเพื่อเปิดอ่าน':'ไม่ได้เปิดใช้งาน'} <ChevronRight size={13}/></small>{data.game.objectives_enabled&&objective&&<div className="bw-objective-progress" aria-label={`ความคืบหน้า ${objective.current} จาก ${objective.target}`}>{Array.from({length:Math.max(1,objective.target)},(_,i)=><span key={i} className={i<objective.current?'is-done':''}/>)}</div>}</button></div>
       <VillageLocationStatus playerCount={data.players.length} burnedLocations={data.burnedLocations} burnedCount={data.burnedCount}/>
