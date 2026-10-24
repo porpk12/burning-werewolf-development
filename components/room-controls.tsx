@@ -13,6 +13,7 @@ export function RoomControls() {
   const [room, setRoom] = useState<Room | null>(null)
   const [roomCode, setRoomCode] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [roomName, setRoomName] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [previousRoom, setPreviousRoom] = useState('')
@@ -35,7 +36,7 @@ export function RoomControls() {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(action === 'create' ? { action } : { action, roomCode: roomCode.trim(), displayName: displayName.trim() }),
+        body: JSON.stringify(action === 'create' ? { action, roomName: roomName.trim() } : { action, roomCode: roomCode.trim(), displayName: displayName.trim() }),
       })
       const result = await response.json().catch(() => null)
       if (!response.ok) {
@@ -57,6 +58,6 @@ export function RoomControls() {
 
   return <div className="room-control-card">
     <div className="room-control-header"><div><p className="eyebrow">ห้องเกมออนไลน์</p><h3>{mode === 'create' ? 'สร้างห้องใหม่' : 'เข้าร่วมห้อง'}</h3></div><button className="icon-button" onClick={() => { setMode('closed'); setRoom(null); setMessage('') }} aria-label="ปิด"><X /></button></div>
-    {room ? <div className="room-created"><p className="text-sm text-[#b7aaa0]">รหัสสำหรับผู้เล่น</p><strong>{room.room_code}</strong><div className="room-created-actions"><Button className="secondary-button" onClick={() => navigator.clipboard?.writeText(room.room_code)}><Copy data-icon="inline-start" /> คัดลอกรหัส</Button><Button className="secondary-button" onClick={() => setMessage('QR พร้อมสร้างเมื่อเปิดใช้งานห้อง')}><QrCode data-icon="inline-start" /> QR Code</Button></div><p className="text-xs text-[#d4a65a]">รอผู้เล่นเข้าร่วม · 0 / {room.player_limit} คน</p></div> : <form onSubmit={submit} className="room-form">{mode === 'create' ? <p className="text-sm text-[#b7aaa0]">กฎคืนเพลิง · v2.4 · 12 คน · มนุษย์หมาป่า 2 ตัว</p> : <><label>รหัสห้อง<input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} maxLength={6} placeholder="เช่น A7K2P9" required /></label><label>ชื่อผู้เล่น<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder="ชื่อที่จะแสดงในห้อง" required /></label></>}<Button type="submit" className="primary-button" disabled={busy}>{busy ? 'กำลังดำเนินการ…' : mode === 'create' ? 'สร้างห้อง' : 'เข้าร่วมเกม'}</Button>{message && <p className="text-xs text-[#d4a65a]" role="status">{message}</p>}</form>}
+    {room ? <div className="room-created"><p className="text-sm text-[#b7aaa0]">รหัสสำหรับผู้เล่น</p><strong>{room.room_code}</strong><div className="room-created-actions"><Button className="secondary-button" onClick={() => navigator.clipboard?.writeText(room.room_code)}><Copy data-icon="inline-start" /> คัดลอกรหัส</Button><Button className="secondary-button" onClick={() => router.push(`/lobby/${room.room_code}`)}>ไปที่ห้องเกม</Button></div><p className="text-xs text-[#d4a65a]">สร้างห้องสำเร็จ · ไปที่ห้องเกมเพื่อจัดการผู้เล่น</p></div> : <form onSubmit={submit} className="room-form">{mode === 'create' ? <label>ชื่อห้อง<input value={roomName} onChange={(event) => setRoomName(event.target.value)} maxLength={80} placeholder="ตั้งชื่อห้องเกม" required /></label> : <><label>รหัสห้อง<input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} maxLength={6} placeholder="เช่น A7K2P9" required /></label><label>ชื่อผู้เล่น<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder="ชื่อที่จะแสดงในห้อง" required /></label></>}<Button type="submit" className="primary-button" disabled={busy}>{busy ? 'กำลังดำเนินการ…' : mode === 'create' ? 'สร้างห้อง' : 'เข้าร่วมเกม'}</Button>{message && <p className="text-xs text-[#d4a65a]" role="status">{message}</p>}</form>}
   </div>
 }
