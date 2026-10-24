@@ -10,10 +10,8 @@ type Room = { id: string; room_code: string; player_limit: number; werewolf_coun
 export function RoomControls({ trigger = 'inline' }: { trigger?: 'inline' | 'header' }) {
   const router = useRouter()
   const [mode, setMode] = useState<'closed' | 'join'>('closed')
-  const [room, setRoom] = useState<Room | null>(null)
   const [roomCode, setRoomCode] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [roomName, setRoomName] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
   const [previousRoom, setPreviousRoom] = useState('')
@@ -41,8 +39,6 @@ export function RoomControls({ trigger = 'inline' }: { trigger?: 'inline' | 'hea
       const result = await response.json().catch(() => null)
       if (!response.ok) {
         setMessage(result?.error ?? `ดำเนินการไม่สำเร็จ (HTTP ${response.status})`)
-      } else if (action === 'create') {
-        setRoom(result.game)
       } else {
         window.localStorage.setItem('bwf_last_room', roomCode.trim().toUpperCase())
         router.push(`/lobby/${roomCode.trim().toUpperCase()}`)
@@ -55,10 +51,17 @@ export function RoomControls({ trigger = 'inline' }: { trigger?: 'inline' | 'hea
   }
 
 
+  useEffect(() => {
+    if (trigger !== 'header') return
+    const open = () => { setMessage(''); setMode('join') }
+    window.addEventListener('bw-open-join', open)
+    return () => window.removeEventListener('bw-open-join', open)
+  }, [trigger])
+
   return <>
-    {trigger === 'header' ? <Button className="bw-start-button" onClick={() => setMode('join')}><Gamepad2 className="mr-2 size-4" /> เริ่มเล่นเกม</Button> :
-      <div className="room-actions"><Button className="primary-button" onClick={() => setMode('join')}><Users className="mr-2 size-4" /> เข้าร่วมห้อง</Button>{previousRoom && <Button className="secondary-button" onClick={() => router.push(`/lobby/${previousRoom}`)}>กลับเข้าห้องเดิม ({previousRoom})</Button>}</div>}
-    {mode === 'join' && <div className="bw-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setMode('closed') }}>
+    {trigger === 'header' ? <Button className="bw-start-button" onClick={() => setMode('join')}><Gamepad2 className="mr-2 size-4" /> เริ่มเล่น</Button> :
+      <div className="room-actions"><Button className="primary-button" onClick={() => window.dispatchEvent(new Event('bw-open-join'))}><Users className="mr-2 size-4" /> เข้าร่วมห้อง</Button>{previousRoom && <Button className="secondary-button" onClick={() => router.push(`/lobby/${previousRoom}`)}>กลับเข้าห้องเดิม ({previousRoom})</Button>}</div>}
+    {trigger === 'header' && mode === 'join' && <div className="bw-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setMode('closed') }}>
       <div className="bw-modal-card" role="dialog" aria-modal="true" aria-labelledby="bw-join-title">
         <div className="room-control-header"><div><p className="eyebrow">BURNING WEREWOLF</p><h3 id="bw-join-title">เข้าร่วมห้องเกม</h3></div><button type="button" className="icon-button" onClick={() => { setMode('closed'); setMessage('') }} aria-label="ปิด"><X /></button></div>
         <form onSubmit={submit} className="room-form">
