@@ -1315,3 +1315,7 @@ button, input, textarea, select { font: inherit; }
 .bw-guide-steps strong { display: block; color: #f2e4c9; }
 .bw-history-panel { margin-top: 20px; padding: 24px; }
 @media (max-width: 1023px) { .sidebar-panel { position: static !important; } }
+
+/* V3: align start button with compact help button */
+.bw-start-button { height:36px !important; min-height:36px !important; padding:0 14px !important; border-radius:6px !important; font-size:12px !important; background:#7f2926 !important; border-color:#a74439 !important; color:#f7e7df !important; box-shadow:none !important; }
+.bw-start-button:hover { background:#a8372e !important; }
