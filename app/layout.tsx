@@ -1,6 +1,9 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
+import { Anuphan } from 'next/font/google'
 import './globals.css'
+
+const anuphan = Anuphan({ subsets: ['thai', 'latin'], display: 'swap', variable: '--font-anuphan' })
 
 export const metadata: Metadata = {
   title: 'Burning Werewolf · เกมล่ามนุษย์หมาป่า',
@@ -26,7 +29,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th">
-      <body className="antialiased">
+      <body className={`${anuphan.variable} ${anuphan.className} antialiased`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
