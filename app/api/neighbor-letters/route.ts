@@ -16,8 +16,10 @@ export async function GET(request:Request){
  const {data:players}=await db.from('game_players').select('id,display_name,status').eq('game_id',game.id).neq('status','removed')
  const {data:letters,error}=await db.from('bw_neighbor_letters').select('id,author_id,round_number,body,reviewed_body,status,rejection_reason,recipient_id,delivered_round,created_at').eq('game_id',game.id).order('created_at')
  if(error)return NextResponse.json({error:error.message},{status:500})
+ let homeRecipients=0;let locationClosed=false
+ if(isMod&&game.phase==='night'){const [{data:choices},{data:round}]=await Promise.all([db.from('night_location_choices').select('player_id').eq('game_id',game.id).eq('round_number',game.round_number).eq('location_id','home'),db.from('night_location_rounds').select('closed').eq('game_id',game.id).eq('round_number',game.round_number).maybeSingle()]);homeRecipients=new Set((choices??[]).map(x=>x.player_id)).size;locationClosed=Boolean(round?.closed)}
  const relevant=isMod?letters:(letters??[]).filter(x=>x.author_id===selfId||x.recipient_id===selfId&&x.status==='delivered')
- return NextResponse.json({round:game.round_number,phase:game.phase,players:isMod?players:undefined,letters:relevant?.map(x=>isMod||x.author_id===selfId?x:{id:x.id,round_number:x.round_number,reviewed_body:x.reviewed_body??x.body,status:x.status,delivered_round:x.delivered_round})},{headers:{'Cache-Control':'no-store'}})
+ return NextResponse.json({round:game.round_number,phase:game.phase,homeRecipients,locationClosed,players:isMod?players:undefined,letters:relevant?.map(x=>isMod||x.author_id===selfId?x:{id:x.id,round_number:x.round_number,reviewed_body:x.reviewed_body??x.body,status:x.status,delivered_round:x.delivered_round})},{headers:{'Cache-Control':'no-store'}})
 }
 export async function POST(request:Request){
  const body=await request.json().catch(()=>null);const code=typeof body?.code==='string'?body.code.trim().toUpperCase():'';const c=await auth(request,code);if(!c)return NextResponse.json({error:'ไม่มีสิทธิ์เข้าถึง'},{status:401});const {db,game,isMod,selfId}=c
