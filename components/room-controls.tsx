@@ -2,14 +2,14 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Copy, Plus, QrCode, Users, X } from 'lucide-react'
+import { Gamepad2, Users, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type Room = { id: string; room_code: string; player_limit: number; werewolf_count: number; phase: string; lobby_open: boolean }
 
-export function RoomControls() {
+export function RoomControls({ trigger = 'inline' }: { trigger?: 'inline' | 'header' }) {
   const router = useRouter()
-  const [mode, setMode] = useState<'closed' | 'create' | 'join'>('closed')
+  const [mode, setMode] = useState<'closed' | 'join'>('closed')
   const [room, setRoom] = useState<Room | null>(null)
   const [roomCode, setRoomCode] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -31,12 +31,12 @@ export function RoomControls() {
     if (busy) return
     setBusy(true)
     setMessage('')
-    const action = mode === 'create' ? 'create' : 'join'
+    const action = 'join'
     try {
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(action === 'create' ? { action, roomName: roomName.trim() } : { action, roomCode: roomCode.trim(), displayName: displayName.trim() }),
+        body: JSON.stringify({ action, roomCode: roomCode.trim(), displayName: displayName.trim() }),
       })
       const result = await response.json().catch(() => null)
       if (!response.ok) {
@@ -54,10 +54,20 @@ export function RoomControls() {
     }
   }
 
-  if (mode === 'closed') return <div className="room-actions">{previousRoom && <Button className="secondary-button" onClick={() => router.push(`/lobby/${previousRoom}`)}>กลับเข้าห้องเดิม ({previousRoom})</Button>}<Button className="primary-button" onClick={() => setMode('create')}><Plus data-icon="inline-start" /> สร้างเกมใหม่</Button><Button className="secondary-button" onClick={() => setMode('join')}><Users data-icon="inline-start" /> เข้าร่วมห้อง</Button></div>
 
-  return <div className="room-control-card">
-    <div className="room-control-header"><div><p className="eyebrow">ห้องเกมออนไลน์</p><h3>{mode === 'create' ? 'สร้างห้องใหม่' : 'เข้าร่วมห้อง'}</h3></div><button className="icon-button" onClick={() => { setMode('closed'); setRoom(null); setMessage('') }} aria-label="ปิด"><X /></button></div>
-    {room ? <div className="room-created"><p className="text-sm text-[#b7aaa0]">รหัสสำหรับผู้เล่น</p><strong>{room.room_code}</strong><div className="room-created-actions"><Button className="secondary-button" onClick={() => navigator.clipboard?.writeText(room.room_code)}><Copy data-icon="inline-start" /> คัดลอกรหัส</Button><Button className="secondary-button" onClick={() => router.push(`/lobby/${room.room_code}`)}>ไปที่ห้องเกม</Button></div><p className="text-xs text-[#d4a65a]">สร้างห้องสำเร็จ · ไปที่ห้องเกมเพื่อจัดการผู้เล่น</p></div> : <form onSubmit={submit} className="room-form">{mode === 'create' ? <label>ชื่อห้อง<input value={roomName} onChange={(event) => setRoomName(event.target.value)} maxLength={80} placeholder="ตั้งชื่อห้องเกม" required /></label> : <><label>รหัสห้อง<input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} maxLength={6} placeholder="เช่น A7K2P9" required /></label><label>ชื่อผู้เล่น<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={32} placeholder="ชื่อที่จะแสดงในห้อง" required /></label></>}<Button type="submit" className="primary-button" disabled={busy}>{busy ? 'กำลังดำเนินการ…' : mode === 'create' ? 'สร้างห้อง' : 'เข้าร่วมเกม'}</Button>{message && <p className="text-xs text-[#d4a65a]" role="status">{message}</p>}</form>}
-  </div>
+  return <>
+    {trigger === 'header' ? <Button className="bw-start-button" onClick={() => setMode('join')}><Gamepad2 className="mr-2 size-4" /> เริ่มเล่นเกม</Button> :
+      <div className="room-actions"><Button className="primary-button" onClick={() => setMode('join')}><Users className="mr-2 size-4" /> เข้าร่วมห้อง</Button>{previousRoom && <Button className="secondary-button" onClick={() => router.push(`/lobby/${previousRoom}`)}>กลับเข้าห้องเดิม ({previousRoom})</Button>}</div>}
+    {mode === 'join' && <div className="bw-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setMode('closed') }}>
+      <div className="bw-modal-card" role="dialog" aria-modal="true" aria-labelledby="bw-join-title">
+        <div className="room-control-header"><div><p className="eyebrow">BURNING WEREWOLF</p><h3 id="bw-join-title">เข้าร่วมห้องเกม</h3></div><button type="button" className="icon-button" onClick={() => { setMode('closed'); setMessage('') }} aria-label="ปิด"><X /></button></div>
+        <form onSubmit={submit} className="room-form">
+          <label>รหัสห้อง<input value={roomCode} onChange={(e) => setRoomCode(e.target.value.toUpperCase())} maxLength={6} placeholder="กรอกรหัสห้อง 6 ตัว" required autoFocus /></label>
+          <label>ชื่อผู้เล่น<input value={displayName} onChange={(e) => setDisplayName(e.target.value)} maxLength={32} placeholder="ชื่อที่จะแสดงในเกม" required /></label>
+          <Button type="submit" className="primary-button" disabled={busy}>{busy ? 'กำลังเข้าร่วม…' : 'ยืนยันเข้าร่วมเกม'}</Button>
+          {message && <p role="status" className="text-xs text-[#f1a777]">{message}</p>}
+        </form>
+      </div>
+    </div>}
+  </>
 }
