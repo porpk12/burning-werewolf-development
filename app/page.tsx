@@ -118,7 +118,6 @@ export default function Page() {
       // top cannot reach the sticky navigation because the page ends.
       if (atBottom && document.getElementById('studio')) current = 'studio'
       setActiveTop(current === 'studio' ? 'studio' : ['portal', 'players', 'history'].includes(current) ? 'portal' : 'dashboard')
-      setActiveSection(current === 'studio' ? (activeTab === 'locations' ? 'locations' : activeTab === 'abilities' ? 'abilities' : 'rules') : current === 'portal' ? 'join' : current)
     }
     const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(update) }
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -150,7 +149,7 @@ export default function Page() {
           <a className={`side-link ${activeSection === 'dashboard' ? 'selected' : ''}`} href="#dashboard" onClick={(event) => { event.preventDefault(); navigateTo('dashboard') }}><LayoutDashboard /> แดชบอร์ด </a>
           <a className={`side-link ${activeSection === 'rules' ? 'selected' : ''}`} href="#studio" onClick={(event) => { event.preventDefault(); navigateTo('rules', 'overview') }}><ScrollText /> กติกา</a>
           <a className={`side-link ${activeSection === 'locations' ? 'selected' : ''}`} href="#studio" onClick={(event) => { event.preventDefault(); navigateTo('locations', 'locations') }}><MapPin /> สถานที่</a>
-          <a className={`side-link ${activeSection === 'abilities' ? 'selected' : ''}`} href="#studio" onClick={(event) => { event.preventDefault(); navigateTo('abilities', 'abilities') }}><WandSparkles /> ความสามารถ</a>
+          <a className={`side-link ${activeSection === 'abilities' ? 'selected' : ''}`} href="#studio" onClick={(event) => { event.preventDefault(); navigateTo('abilities', 'abilities') }}><WandSparkles /> วิธีชนะ</a>
           <a className={`side-link ${activeSection === 'players' ? 'selected' : ''}`} href="#portal" onClick={(event) => { event.preventDefault(); navigateTo('players') }}><Users /> ผู้เล่น</a>
           <div className="sidebar-divider" />
           <div className="sidebar-label">ระบบเกม</div>
