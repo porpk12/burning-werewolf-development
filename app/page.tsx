@@ -104,20 +104,27 @@ export default function Page() {
   }
 
   useEffect(() => {
-    let ticking = false
+    let frame = 0
     const update = () => {
-      ticking = false
-      let current = 'dashboard'
-      for (const id of ['dashboard', 'portal', 'players', 'history', 'studio']) {
-        if ((document.getElementById(id)?.getBoundingClientRect().top ?? Infinity) <= 180) current = id
+      frame = 0
+      const sectionIds = ['portal', 'players', 'history', 'studio'] as const
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24
+      let current: string = 'dashboard'
+      for (const id of sectionIds) {
+        const el = document.getElementById(id)
+        if (el && el.getBoundingClientRect().top <= Math.min(220, window.innerHeight * .42)) current = id
       }
-      setActiveTop(current === 'studio' ? 'studio' : ['portal','players','history'].includes(current) ? 'portal' : 'dashboard')
+      // The guide is the final section: it must stay selected even when its
+      // top cannot reach the sticky navigation because the page ends.
+      if (atBottom && document.getElementById('studio')) current = 'studio'
+      setActiveTop(current === 'studio' ? 'studio' : ['portal', 'players', 'history'].includes(current) ? 'portal' : 'dashboard')
       setActiveSection(current === 'studio' ? (activeTab === 'locations' ? 'locations' : activeTab === 'abilities' ? 'abilities' : 'rules') : current === 'portal' ? 'join' : current)
     }
-    const onScroll = () => { if (!ticking) { ticking = true; window.requestAnimationFrame(update) } }
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(update) }
     window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
     update()
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); if (frame) window.cancelAnimationFrame(frame) }
   }, [activeTab])
   return (
     <main className={`${anuphan.variable} app-shell`}>
