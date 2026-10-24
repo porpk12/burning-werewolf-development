@@ -1319,3 +1319,8 @@ button, input, textarea, select { font: inherit; }
 /* V3: align start button with compact help button */
 .bw-start-button { height:36px !important; min-height:36px !important; padding:0 14px !important; border-radius:6px !important; font-size:12px !important; background:#7f2926 !important; border-color:#a74439 !important; color:#f7e7df !important; box-shadow:none !important; }
 .bw-start-button:hover { background:#a8372e !important; }
+
+/* V5: portal the dialog to document.body, away from clipping and stacking contexts */
+.bw-modal-backdrop { position: fixed !important; inset: 0 !important; z-index: 99999 !important; display: flex !important; align-items: center !important; justify-content: center !important; padding: max(16px, env(safe-area-inset-top)) 16px !important; overflow-y: auto; }
+.bw-modal-card { position: relative; margin: auto; width: min(100%, 500px); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.side-link.selected { color: #f2e4c9; }
