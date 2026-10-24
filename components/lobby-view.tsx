@@ -48,6 +48,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   const [kickTarget, setKickTarget] = useState<Player | null>(null)
   const [showOwnRole, setShowOwnRole] = useState(false)
   const [storyOpen, setStoryOpen] = useState(false)
+  const [playerLobbyPreview, setPlayerLobbyPreview] = useState(false)
   
   const [mailboxOpen, setMailboxOpen] = useState(false)
   const [wolfCount, setWolfCount] = useState(1)
@@ -63,7 +64,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
         const key = `bw_intro_${code}_${result.selfId ?? 'unknown'}_${result.game.started_at ?? 'not-started'}`
         setStoryOpen(!window.sessionStorage.getItem(key))
       }
-      if (!moderator && result.game.phase === 'lobby') setStoryOpen(false)
+      if (!moderator && result.game.phase === 'lobby') { setStoryOpen(false); setPlayerLobbyPreview(false) }
       if (!moderator && result.selfId) window.localStorage.setItem('bwf_last_room', code)
       if (!settingsChanged) { setWolfCount(result.game.werewolf_count); setObjectivesEnabled(result.game.objectives_enabled !== false) }
       setError('')
@@ -165,7 +166,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
   // The current phase is unknown until the first response. Avoid flashing the Lobby on refresh.
   if (!data && !error) return <main className="min-h-dvh bg-[#151b18] flex items-center justify-center px-4 text-[#d8c8aa]" role="status" aria-live="polite"><span className="text-sm">กำลังเข้าสู่หมู่บ้าน…</span></main>
   if (!data && error) return <main className="min-h-dvh bg-[#151b18] flex flex-col items-center justify-center gap-4 px-4 text-[#e7d5be]"><p role="alert">{error}</p><button type="button" onClick={() => void refresh()} className="rounded-lg border border-[#a68b65] px-4 py-2">ลองอีกครั้ง</button></main>
-  if (!moderator && data && data.game.phase !== 'lobby') return <PlayerGameScreen code={code} data={data} storyOpen={storyOpen} onStoryClose={acknowledgeStory} error={error} />
+  if (!moderator && data && data.game.phase !== 'lobby' && !playerLobbyPreview) return <PlayerGameScreen code={code} data={data} storyOpen={storyOpen} onStoryClose={acknowledgeStory} error={error} onBackToLobby={()=>setPlayerLobbyPreview(true)} />
   return <main className={`bw-game ${moderator ? 'bw-moderator-scene' : ''} ${!moderator && data?.game.phase !== 'lobby' ? 'h-dvh overflow-hidden py-2 sm:py-4' : 'min-h-screen py-10'} px-3 sm:px-5 text-[#f2e4c9] ${exiled ? 'bg-gradient-to-b from-[#080a12] via-[#171320] to-[#090910]' : 'bg-[#171b18]'}`}><div className={`bw-game-surface mx-auto ${moderator ? 'max-w-4xl' : 'max-w-xl'} p-4 sm:p-6 ${!moderator && data?.game.phase !== 'lobby' ? 'h-full overflow-y-auto overscroll-contain' : ''}`}>{!moderator && data?.game.phase === 'night_zero' && storyOpen && <div role="dialog" aria-modal="true" aria-labelledby="bw-story-title" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 px-4 py-6">
       <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-amber-700/70 bg-[#1c1411] p-6 text-center shadow-2xl">
         <p className="text-xs tracking-[0.2em] text-amber-400">BURNING WEREWOLF</p>
@@ -179,6 +180,7 @@ export function LobbyView({ code, moderator = false }: { code: string; moderator
         <button type="button" onClick={acknowledgeStory} className="mt-6 w-full rounded-lg bg-amber-600 px-5 py-3 font-semibold text-[#1b100c]">เปิดการ์ดบทบาท</button>
       </div>
     </div>}
+    {!moderator && playerLobbyPreview && data?.game.phase !== 'lobby' && <div className="mb-4 rounded-xl border border-[#74583b] bg-[#251e19] p-3"><p className="mb-2 text-center text-sm text-[#d6c3a6]">กำลังดูห้องรอเกม · เกมยังดำเนินอยู่ตามปกติ</p><button type="button" onClick={()=>setPlayerLobbyPreview(false)} className="w-full rounded-lg bg-[#cba15e] px-4 py-3 text-sm font-semibold text-[#211810]">กลับเข้าสู่เกม</button></div>}
     {moderator && <a href="/history" className="mb-4 ml-auto flex w-fit items-center rounded-lg border border-[#71553a] px-4 py-2 text-sm text-amber-200 hover:bg-[#3a2a20]">จัดการประวัติเกม</a>}
     {!moderator && data && !['lobby','finished'].includes(data.game.phase) && <section aria-label="สรุปสถานะเกม" className="mb-3 rounded-xl border border-[#685044] bg-[#1a1311] p-3">
       <p className="text-center text-sm font-semibold text-amber-100">วันที่เหลืออยู่</p>
