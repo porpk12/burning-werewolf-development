@@ -1299,3 +1299,19 @@ button, input, textarea, select { font: inherit; }
 .mobile-menu button { display: block; width: 100%; text-align: left; padding: 10px 16px; background: transparent; color: #988c83; border: 0; cursor: pointer; }
 .mobile-menu button.active { color: #f2e4c9; }
 @media (max-width: 600px) { #dashboard, #portal, #studio, #join-game { scroll-margin-top: 82px; } }
+
+.topbar { position: sticky !important; top: 0; z-index: 80; }
+.sidebar-panel { position: sticky !important; top: 78px; height: calc(100vh - 78px); overflow-y: auto; align-self: start; }
+#dashboard, #portal, #players, #history, #studio { scroll-margin-top: 112px; }
+.bw-start-button { background: #bb2924 !important; border: 1px solid #ed5747 !important; color: #fff !important; font-weight: 700; }
+.bw-start-button:hover { background: #d83b30 !important; }
+.bw-modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.78); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.bw-modal-card { width: min(100%, 460px); max-height: 90vh; overflow-y: auto; border: 1px solid #78533b; border-radius: 16px; padding: 24px; background: #1c191b; box-shadow: 0 20px 70px #000b; }
+.bw-guide-card { width: min(100%, 540px); }
+.bw-guide-steps { display: grid; gap: 14px; margin-top: 20px; }
+.bw-guide-steps > div { display: flex; align-items: flex-start; gap: 14px; padding: 12px; border: 1px solid #40332d; border-radius: 10px; }
+.bw-guide-steps span { font-size: 24px; }
+.bw-guide-steps p { color: #cbbdb1; font-size: 13px; line-height: 1.7; }
+.bw-guide-steps strong { display: block; color: #f2e4c9; }
+.bw-history-panel { margin-top: 20px; padding: 24px; }
+@media (max-width: 1023px) { .sidebar-panel { position: static !important; } }
